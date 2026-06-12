@@ -5,3 +5,14 @@ dist/
 *.log
 coverage/
 .DS_Store
+
+# Build artifacts
+dist/
+*.tsbuildinfo
+
+# Coverage
+coverage/
+
+# IDE
+.vscode/
+.idea/
