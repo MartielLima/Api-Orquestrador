@@ -26,10 +26,8 @@
   },
   "dependencies": {
     "@apollo/server": "^4.10.0",
-    "@as-integrations/fastify": "^2.0.0",
     "bcrypt": "^5.1.1",
     "drizzle-orm": "^0.30.0",
-    "fastify": "^4.26.0",
     "graphql": "^16.8.1",
     "graphql-tag": "^2.12.6",
     "jsonwebtoken": "^9.0.2",
