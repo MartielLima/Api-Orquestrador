@@ -4,7 +4,10 @@ const envSchema = z.object({
   // Sascar
   SASCAR_USUARIO: z.string().min(1, 'SASCAR_USUARIO obrigatório'),
   SASCAR_SENHA: z.string().min(1, 'SASCAR_SENHA obrigatória'),
-  SASCAR_WSDL_URL: z.string().url().default('https://sasintegra.sascar.com.br/SasIntegra/SasIntegraWSService'),
+  SASCAR_WSDL_URL: z
+    .string()
+    .url()
+    .default('https://sasintegra.sascar.com.br/SasIntegra/SasIntegraWSService'),
   SASCAR_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
   SASCAR_MAX_RETRIES: z.coerce.number().int().min(0).max(10).default(3),
 
@@ -75,7 +78,7 @@ export interface AppConfig {
     url: string;
   };
   log: {
-    level: string;
+    level: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
   };
 }
 
