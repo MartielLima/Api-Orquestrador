@@ -76,8 +76,7 @@ export const typeDefs = gql`
   }
 
   type CaixaPretaEvento {
-    id: ID!
-      @deprecated(reason: "Caixa-preta desativada na Sascar v2.07. Use posicoesRecentes.")
+    id: ID! @deprecated(reason: "Caixa-preta desativada na Sascar v2.07. Use posicoesRecentes.")
     idVeiculo: Int
     placa: String
     dataEvento: DateTime

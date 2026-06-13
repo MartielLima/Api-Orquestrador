@@ -65,11 +65,7 @@ export const resolvers = {
       args: { placa?: string; idVeiculo?: number },
       ctx: AppContext,
     ) => getCaixaPretaEventos(ctx, args),
-    requestLog: async (
-      _: unknown,
-      args: { limit?: number; method?: string },
-      ctx: AppContext,
-    ) => {
+    requestLog: async (_: unknown, args: { limit?: number; method?: string }, ctx: AppContext) => {
       const params: any[] = [args.limit ?? 100];
       let where = '';
       if (args.method) {

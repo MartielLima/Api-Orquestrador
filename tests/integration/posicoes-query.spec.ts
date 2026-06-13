@@ -14,7 +14,9 @@ describe('posicoes GraphQL', () => {
 
   it('syncStatus returns cursor rows', async () => {
     const { executeOperation } = await buildTestServer();
-    const res = await executeOperation({ query: '{ syncStatus { method idVeiculo lastIdPacote } }' });
+    const res = await executeOperation({
+      query: '{ syncStatus { method idVeiculo lastIdPacote } }',
+    });
     expect(res.errors).toBeUndefined();
     expect(Array.isArray((res.data as any).syncStatus)).toBe(true);
   });
