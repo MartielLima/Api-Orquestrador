@@ -10,20 +10,39 @@ Cobertura de métodos Sascar (v1): clientes, veículos, motoristas, posições (
 
 ## Quickstart
 
+### Opção 1: Docker Compose (recomendado, zero setup local)
+
+```bash
+# 1. Edite o .env com suas credenciais
+cp .env.example .env
+# Ajuste: SASCAR_USUARIO, SASCAR_SENHA, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
+# Para gerar secrets: openssl rand -hex 32 (rode 2x)
+
+# 2. Suba o stack (postgres + app, com migrations + seed automáticos)
+docker compose up -d --build
+
+# 3. Acompanhe o startup
+docker compose logs -f app
+# Espera ver: "Apollo server started" + healthcheck "(healthy)"
+
+# 4. Teste
+curl -X POST http://localhost:4000/ -H 'Content-Type: application/json' \
+  -d '{"query":"{ health }"}'
+# → {"data":{"health":"ok"}}
+```
+
+### Opção 2: Desenvolvimento local (hot-reload)
+
 ```bash
 docker compose up -d postgres
 cp .env.example .env
-# edite .env: SASCAR_USUARIO, SASCAR_SENHA, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
-# gere secrets: openssl rand -hex 32 (rode 2x)
 npm install           # postinstall builda sascar-sdk se necessário
-npm run db:migrate    # cria 9 tabelas (4 migrations)
-npm run db:seed       # cria admin@local.dev
+npm run db:migrate
+npm run db:seed
 npm run dev
 ```
 
-GraphQL endpoint: `http://localhost:4000/`
-
-### Primeiro uso
+### Primeiro uso (em qualquer opção)
 
 ```bash
 # 1. Login (cria sessão, retorna access + refresh token)
@@ -37,6 +56,18 @@ curl -X POST http://localhost:4000/ \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"query":"{ veiculos(quantidade: 10) { idVeiculo placa idCliente } }"}'
+```
+
+### Comandos Docker úteis
+
+```bash
+docker compose up -d --build       # build + start
+docker compose down                 # stop
+docker compose down -v              # stop + remove volumes (apaga DB)
+docker compose logs -f app          # follow logs
+docker compose exec app sh          # shell no container
+docker compose exec postgres psql -U api_orquestrador -d api_orquestrador
+docker images api-orquestrador:0.1.0
 ```
 
 ## Variáveis de ambiente
@@ -93,6 +124,23 @@ PostgreSQL  ◄──  cache check (TTL + cursor)
   │
 node-cron  ──►  job syncPositions (a cada 10 min, opt-in)
 ```
+
+### Docker
+
+A imagem (`api-orquestrador:0.1.0`) é multi-stage (Node 22-alpine):
+
+1. **Builder**: clona o `sascar-sdk` do GitHub, builda seu `dist/`, instala deps (com `npm rebuild bcrypt` para o native binding), compila nosso TS.
+2. **Runtime**: imagem limpa com `node_modules` podado, `dist/` compilado, `src/db/migrations/` para o script de migration rodar, e o `docker-entrypoint.sh` que:
+   - Aguarda o Postgres responder
+   - Roda migrations (idempotente)
+   - Roda seed do admin (idempotente)
+   - `exec node dist/index.js`
+
+`tini` é o PID 1 (signal forwarding). Healthcheck: POST GraphQL `{ health }` no endpoint.
+
+**Variáveis de ambiente** no compose: lidas do `.env` (com defaults hardcoded em dev). Em produção, passe via secrets do orquestrador.
+
+**Volume**: `pg_data` persiste dados do Postgres entre `up`/`down` (use `down -v` para resetar).
 
 **Princípios:**
 

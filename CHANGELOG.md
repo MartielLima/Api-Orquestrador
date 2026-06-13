@@ -2,6 +2,24 @@
 
 Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e este projeto adere a [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [0.1.1] - 2026-06-13
+
+### Adicionado
+
+- **Docker**: `Dockerfile` multi-stage (Node 22-alpine) com build do `sascar-sdk` a partir do GitHub (clone + tsc), `npm rebuild bcrypt` para o native binding, e `docker-entrypoint.sh` que aguarda Postgres, roda migrations, e seed antes de subir o app.
+- `docker-compose.yml` atualizado com servico `app` (build from Dockerfile, healthcheck via POST GraphQL `{ health }`, depends_on postgres).
+- `.dockerignore` para reduzir o contexto de build.
+- `tini` como PID 1 (signal forwarding) na imagem runtime.
+- `dns: 127.0.0.11` no compose para resolver nomes de servicos no alpine.
+- README com secao Docker (quickstart via compose, comandos uteis, troubleshooting).
+
+### Modificado
+
+- `scripts/` movido para `src/scripts/` (compilado pelo mesmo `tsc` que compila o app; antes ficava fora de `rootDir`).
+- `src/scripts/seed-admin.ts`: imports relativos ajustados para `'../auth/password'` e `'../config'`.
+- `package.json`: scripts `db:migrate`, `db:seed`, `postinstall` apontam para `src/scripts/`.
+- `scripts/tsconfig.json` removido (nao mais necessario apos a reestruturacao).
+
 ## [0.1.0] - 2026-06-12
 
 ### Adicionado

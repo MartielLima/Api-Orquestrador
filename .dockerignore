@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Env
+.env
+.env.local
+.env.docker
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
+
+# Tests
+tests/
+
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Docker (avoid recursion)
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose*.yml
+
+# Docs (not needed in image, kept outside)
+docs/
+README.md
+CHANGELOG.md
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Misc
+.cache/
+tmp/

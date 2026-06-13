@@ -8,7 +8,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "postinstall": "[ -f node_modules/sascar-sdk/dist/index.js ] || (cd node_modules/sascar-sdk && npm run build)",
+    "postinstall": "node src/scripts/postinstall.js",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "dev": "tsx watch src/index.ts",
@@ -21,9 +21,9 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts",
-    "db:seed": "tsx scripts/seed-admin.ts",
-    "db:reset": "tsx scripts/migrate.ts --reset"
+    "db:migrate": "tsx src/scripts/migrate.ts",
+    "db:seed": "tsx src/scripts/seed-admin.ts",
+    "db:reset": "tsx src/scripts/migrate.ts --reset"
   },
   "dependencies": {
     "@apollo/server": "^4.10.0",

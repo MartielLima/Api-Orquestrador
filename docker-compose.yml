@@ -17,5 +17,53 @@ services:
       timeout: 3s
       retries: 5
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: api-orquestrador:0.1.0
+    container_name: api-orquestrador-app
+    restart: unless-stopped
+    dns:
+      - 127.0.0.11
+    dns_search:
+      - .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://api_orquestrador:dev_password@postgres:5432/api_orquestrador
+      SASCAR_USUARIO: ${SASCAR_USUARIO:-seu_usuario}
+      SASCAR_SENHA: ${SASCAR_SENHA:-sua_senha}
+      SASCAR_WSDL_URL: ${SASCAR_WSDL_URL:-https://sasintegra.sascar.com.br/SasIntegra/SasIntegraWSService}
+      SASCAR_TIMEOUT_MS: ${SASCAR_TIMEOUT_MS:-30000}
+      SASCAR_MAX_RETRIES: ${SASCAR_MAX_RETRIES:-3}
+      API_PORT: 4000
+      API_CORS_ORIGINS: ${API_CORS_ORIGINS:-http://localhost:3000}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-min-32-chars-random-12345}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-min-32-chars-random-67890}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@local.dev}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-change-me-admin}
+      CACHE_CADASTRO_TTL_MS: ${CACHE_CADASTRO_TTL_MS:-86400000}
+      CACHE_POSICAO_TTL_MS: ${CACHE_POSICAO_TTL_MS:-300000}
+      SYNC_POSITIONS_ENABLED: ${SYNC_POSITIONS_ENABLED:-false}
+      SYNC_POSITIONS_CRON: ${SYNC_POSITIONS_CRON:-*/10 * * * *}
+      SYNC_POSITIONS_QUANTITY: ${SYNC_POSITIONS_QUANTITY:-1000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test:
+        - CMD
+        - sh
+        - -c
+        - "wget -q -O - --post-data='{\"query\":\"{ health }\"}' --header='Content-Type: application/json' http://localhost:4000/ | grep -q '\"health\":\"ok\"'"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
 volumes:
   pg_data:

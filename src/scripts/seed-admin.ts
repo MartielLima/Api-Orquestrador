@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
-import { hashPassword } from '../src/auth/password';
-import { loadConfig } from '../src/config';
+import { hashPassword } from '../auth/password';
+import { loadConfig } from '../config';
 
 async function main() {
   const cfg = loadConfig();
