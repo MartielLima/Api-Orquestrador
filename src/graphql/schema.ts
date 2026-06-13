@@ -64,6 +64,17 @@ export const typeDefs = gql`
     lastSyncedAt: DateTime!
   }
 
+  type RequestLogEntry {
+    id: ID!
+    method: String!
+    source: String!
+    status: String!
+    cacheHit: Boolean!
+    latencyMs: Int
+    createdAt: DateTime!
+    error: String
+  }
+
   type CaixaPretaEvento {
     id: ID!
       @deprecated(reason: "Caixa-preta desativada na Sascar v2.07. Use posicoesRecentes.")
@@ -83,6 +94,7 @@ export const typeDefs = gql`
     posicoesRecentes(quantidade: Int = 1000): [Posicao!]!
     posicoesPorVeiculo(idVeiculo: Int!, dataInicio: DateTime!, dataFim: DateTime!): [Posicao!]!
     syncStatus: [SyncCursor!]!
+    requestLog(limit: Int = 100, method: String): [RequestLogEntry!]!
     caixaPretaEventos(placa: String, idVeiculo: Int): [CaixaPretaEvento!]!
       @deprecated(reason: "Método 4.51 da Sascar desativado. Use posicoesRecentes.")
   }

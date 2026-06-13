@@ -65,6 +65,32 @@ export const resolvers = {
       args: { placa?: string; idVeiculo?: number },
       ctx: AppContext,
     ) => getCaixaPretaEventos(ctx, args),
+    requestLog: async (
+      _: unknown,
+      args: { limit?: number; method?: string },
+      ctx: AppContext,
+    ) => {
+      const params: any[] = [args.limit ?? 100];
+      let where = '';
+      if (args.method) {
+        params.push(args.method);
+        where = `WHERE method = $${params.length}`;
+      }
+      const { rows } = await ctx.db.execute({
+        sql: `SELECT id, method, source, status, cache_hit, latency_ms, created_at, error FROM request_log ${where} ORDER BY created_at DESC LIMIT $1`,
+        args: params,
+      });
+      return (rows as any[]).map((r) => ({
+        id: String(r.id),
+        method: r.method,
+        source: r.source,
+        status: r.status,
+        cacheHit: r.cache_hit,
+        latencyMs: r.latency_ms,
+        createdAt: r.created_at,
+        error: r.error,
+      }));
+    },
   },
   Mutation: {
     ...auth.Mutation,
