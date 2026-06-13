@@ -11,12 +11,18 @@ export function installShutdown(handle: ShutdownHandle): void {
     process.once(sig, async () => {
       console.log(`[shutdown] received ${sig}, stopping...`);
       for (const t of handle.tasks) {
-        try { t.stop(); } catch (e) { console.error('cron stop failed', e); }
+        try {
+          t.stop();
+        } catch (e) {
+          console.error('cron stop failed', e);
+        }
       }
       try {
         await Promise.race([
           handle.stopServer(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('shutdown timeout')), 60_000)),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('shutdown timeout')), 60_000),
+          ),
         ]);
       } catch (e) {
         console.error('server stop failed', e);
