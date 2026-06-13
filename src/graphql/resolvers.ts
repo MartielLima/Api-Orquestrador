@@ -1,5 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { buildAuthResolvers } from '../auth/resolvers';
+import { getClientes } from '../domain/clientes';
+import { getVeiculos } from '../domain/veiculos';
+import { getMotoristas } from '../domain/motoristas';
 import { loadConfig } from '../config';
+import type { AppContext } from '../context';
 
 const cfg = loadConfig();
 const auth = buildAuthResolvers({
@@ -12,6 +17,9 @@ const auth = buildAuthResolvers({
 export const resolvers = {
   Query: {
     health: () => 'ok',
+    clientes: (_: unknown, args: any, ctx: AppContext) => getClientes(ctx, args),
+    veiculos: (_: unknown, args: any, ctx: AppContext) => getVeiculos(ctx, args),
+    motoristas: (_: unknown, args: any, ctx: AppContext) => getMotoristas(ctx, args),
   },
   Mutation: {
     ...auth.Mutation,

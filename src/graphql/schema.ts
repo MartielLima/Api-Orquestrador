@@ -16,8 +16,38 @@ export const typeDefs = gql`
     user: User!
   }
 
+  type Cliente {
+    idCliente: Int!
+    cnpj: String
+    cpf: String
+    nome: String!
+    fetchedAt: DateTime!
+    expiresAt: DateTime!
+  }
+
+  type Veiculo {
+    idVeiculo: Int!
+    placa: String!
+    idCliente: Int
+    descricao: String
+    idEquipamento: Int
+    fetchedAt: DateTime!
+    expiresAt: DateTime!
+  }
+
+  type Motorista {
+    idMotorista: Int!
+    nome: String!
+    tipoDocumento: String
+    fetchedAt: DateTime!
+    expiresAt: DateTime!
+  }
+
   type Query {
     health: String!
+    clientes(idCliente: Int, quantidade: Int = 1000): [Cliente!]!
+    veiculos(idVeiculo: Int, quantidade: Int = 1000): [Veiculo!]!
+    motoristas(idMotorista: Int, quantidade: Int = 1000): [Motorista!]!
   }
 
   type Mutation {
