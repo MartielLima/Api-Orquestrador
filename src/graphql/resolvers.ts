@@ -4,6 +4,7 @@ import { getClientes } from '../domain/clientes';
 import { getVeiculos } from '../domain/veiculos';
 import { getMotoristas } from '../domain/motoristas';
 import { getPosicoesRecentes, fetchAndUpsertPosicoes } from '../domain/posicoes';
+import { getCaixaPretaEventos } from '../domain/caixaPreta';
 import { loadConfig } from '../config';
 import type { AppContext } from '../context';
 
@@ -59,6 +60,11 @@ export const resolvers = {
         lastSyncedAt: r.last_synced_at,
       }));
     },
+    caixaPretaEventos: (
+      _: unknown,
+      args: { placa?: string; idVeiculo?: number },
+      ctx: AppContext,
+    ) => getCaixaPretaEventos(ctx, args),
   },
   Mutation: {
     ...auth.Mutation,
