@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Pool } from 'pg';
 import { cachedQuery } from '../../src/orchestrator/cache';
 
@@ -33,11 +34,18 @@ describe('cachedQuery', () => {
 
   it('returns cache hit when expires_at > now()', async () => {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await pool.query(`INSERT INTO ${table} (id, nome, raw, fetched_at, expires_at) VALUES (1, 'X', '{}'::jsonb, now(), now() + interval '1 hour')`);
+    await pool.query(
+      `INSERT INTO ${table} (id, nome, raw, fetched_at, expires_at) VALUES (1, 'X', '{}'::jsonb, now(), now() + interval '1 hour')`,
+    );
     const db = { execute: (q: any) => pool.query(q.sql, q.args) } as any;
     let fetcherCalls = 0;
     const result = await cachedQuery<{ id: number; nome: string }>(db, {
-      table, ttlMs: 60_000, fetcher: async () => { fetcherCalls++; return []; },
+      table,
+      ttlMs: 60_000,
+      fetcher: async () => {
+        fetcherCalls++;
+        return [];
+      },
       fromRows: (rows: any[]) => rows.map((r) => ({ id: r.id, nome: r.nome })),
     });
     expect(result.length).toBe(1);
@@ -50,7 +58,9 @@ describe('cachedQuery', () => {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const db = { execute: (q: any) => pool.query(q.sql, q.args) } as any;
     const result = await cachedQuery<{ id: number; nome: string }>(db, {
-      table, ttlMs: 60_000, fetcher: async () => [{ id: 99, nome: 'Fresh', raw: {} } as any],
+      table,
+      ttlMs: 60_000,
+      fetcher: async () => [{ id: 99, nome: 'Fresh', raw: {} } as any],
       fromRows: (rows: any[]) => rows.map((r) => ({ id: r.id, nome: r.nome })),
     });
     expect(result.length).toBe(1);

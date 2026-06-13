@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Pool } from 'pg';
 import { logRequest } from '../../src/orchestrator/log';
 
@@ -16,7 +17,9 @@ describe('logRequest', () => {
       latencyMs: 12,
     });
 
-    const { rows } = await pool.query("SELECT method, status, cache_hit FROM request_log WHERE method = 'test.method'");
+    const { rows } = await pool.query(
+      "SELECT method, status, cache_hit FROM request_log WHERE method = 'test.method'",
+    );
     expect(rows[0].method).toBe('test.method');
     expect(rows[0].status).toBe('ok');
     expect(rows[0].cache_hit).toBe(false);
