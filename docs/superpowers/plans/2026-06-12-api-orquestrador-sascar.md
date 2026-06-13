@@ -84,6 +84,7 @@ api-orquestrador/
 ## Task 1: Verify environment and install runtime
 
 **Files:**
+
 - Modify: (none, only check host)
 
 - [ ] **Step 1: Check Node version**
@@ -111,6 +112,7 @@ Expected: `/home/martiel/GitHub/Api-Orquestrador` with at least `docs/` and `.gi
 ## Task 2: Initialize package.json and install dependencies
 
 **Files:**
+
 - Create: `package.json`
 - Create: `tsconfig.json`
 - Create: `.eslintrc.cjs`
@@ -221,11 +223,7 @@ module.exports = {
   root: true,
   parser: '@typescript-eslint/parser',
   plugins: ['@typescript-eslint'],
-  extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'prettier',
-  ],
+  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'prettier'],
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: 'module',
@@ -290,6 +288,7 @@ git commit -m "chore: scaffold package.json, tsconfig, lint, prettier"
 ## Task 3: Docker Compose for PostgreSQL
 
 **Files:**
+
 - Create: `docker-compose.yml`
 - Create: `.env.example`
 
@@ -306,11 +305,11 @@ services:
       POSTGRES_PASSWORD: dev_password
       POSTGRES_DB: api_orquestrador
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U api_orquestrador"]
+      test: ['CMD-SHELL', 'pg_isready -U api_orquestrador']
       interval: 5s
       timeout: 3s
       retries: 5
@@ -377,6 +376,7 @@ git commit -m "chore: add docker-compose for postgres and .env.example"
 ## Task 4: Config module (zod-validated env)
 
 **Files:**
+
 - Create: `src/config.ts`
 - Test: `tests/unit/config.spec.ts`
 - Create: `jest.config.ts`
@@ -467,7 +467,10 @@ const envSchema = z.object({
   // Sascar
   SASCAR_USUARIO: z.string().min(1, 'SASCAR_USUARIO obrigatório'),
   SASCAR_SENHA: z.string().min(1, 'SASCAR_SENHA obrigatória'),
-  SASCAR_WSDL_URL: z.string().url().default('https://sasintegra.sascar.com.br/SasIntegra/SasIntegraWSService'),
+  SASCAR_WSDL_URL: z
+    .string()
+    .url()
+    .default('https://sasintegra.sascar.com.br/SasIntegra/SasIntegraWSService'),
   SASCAR_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
   SASCAR_MAX_RETRIES: z.coerce.number().int().min(0).max(10).default(3),
 
@@ -602,6 +605,7 @@ git commit -m "feat(config): add zod-validated env loader with tests"
 ## Task 5: Logger (pino)
 
 **Files:**
+
 - Create: `src/lib/logger.ts`
 - Test: `tests/unit/logger.spec.ts`
 
@@ -682,6 +686,7 @@ git commit -m "feat(logger): pino logger with credential redaction"
 ## Task 6: Apollo server scaffold + "hello world"
 
 **Files:**
+
 - Create: `src/server.ts`
 - Create: `src/graphql/schema.ts`
 - Create: `src/graphql/resolvers.ts`
@@ -840,6 +845,7 @@ git commit -m "feat(server): Apollo server scaffold with health query"
 ## Task 7: Database client (pg + drizzle)
 
 **Files:**
+
 - Create: `src/db/client.ts`
 - Test: `tests/integration/db.spec.ts`
 - Modify: `src/context.ts` to include `db`
@@ -851,7 +857,10 @@ import { buildDb } from '../../src/db/client';
 
 describe('db client', () => {
   it('connects to postgres and runs SELECT 1', async () => {
-    const db = buildDb(process.env.DATABASE_URL ?? 'postgresql://api_orquestrador:dev_password@localhost:5432/api_orquestrador');
+    const db = buildDb(
+      process.env.DATABASE_URL ??
+        'postgresql://api_orquestrador:dev_password@localhost:5432/api_orquestrador',
+    );
     const result = await db.execute({ sql: 'SELECT 1 as ok', args: [] });
     expect(result.rows[0]?.ok).toBe(1);
   });
@@ -931,6 +940,7 @@ git commit -m "feat(db): drizzle client with pg pool"
 ## Task 8: Schema + initial migration (users + refresh_tokens)
 
 **Files:**
+
 - Create: `src/db/schema.ts`
 - Create: `src/db/migrations/0001_init.sql`
 - Create: `scripts/migrate.ts`
@@ -939,7 +949,22 @@ git commit -m "feat(db): drizzle client with pg pool"
 - [ ] **Step 1: Write `src/db/schema.ts`**
 
 ```ts
-import { pgTable, uuid, text, boolean, timestamp, bigserial, bigint, integer, doublePrecision, jsonb, primaryKey, index, unique, customType } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  text,
+  boolean,
+  timestamp,
+  bigserial,
+  bigint,
+  integer,
+  doublePrecision,
+  jsonb,
+  primaryKey,
+  index,
+  unique,
+  customType,
+} from 'drizzle-orm/pg-core';
 
 const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 
@@ -955,7 +980,9 @@ export const users = pgTable('users', {
 
 export const refreshTokens = pgTable('refresh_tokens', {
   id: uuid('id').defaultRandom().primaryKey(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
   tokenHash: text('token_hash').notNull().unique(),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
@@ -1042,7 +1069,9 @@ async function main() {
   const pool = new Pool({ connectionString: url });
   await ensureMigrationsTable(pool);
 
-  const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).sort();
+  const files = readdirSync(MIGRATIONS_DIR)
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
   for (const file of files) {
     const { rows } = await pool.query('SELECT 1 FROM _migrations WHERE filename = $1', [file]);
     if (rows.length) {
@@ -1096,10 +1125,12 @@ describe('migrations', () => {
 - [ ] **Step 5: Run migration and test**
 
 Run:
+
 ```
 export $(grep -v '^#' .env.example | xargs) && npx tsx scripts/migrate.ts
 npx jest tests/integration/migrate.spec.ts
 ```
+
 Expected: `migrate.ts` prints `APPLIED 0001_init.sql`; the test PASSes.
 
 - [ ] **Step 6: Commit**
@@ -1114,6 +1145,7 @@ git commit -m "feat(db): users, refresh_tokens, request_log schema + migration r
 ## Task 9: Password hashing
 
 **Files:**
+
 - Create: `src/auth/password.ts`
 - Test: `tests/unit/password.spec.ts`
 
@@ -1174,20 +1206,29 @@ git commit -m "feat(auth): bcrypt password hashing"
 ## Task 10: JWT sign/verify
 
 **Files:**
+
 - Create: `src/auth/jwt.ts`
 - Test: `tests/unit/jwt.spec.ts`
 
 - [ ] **Step 1: Write the failing test `tests/unit/jwt.spec.ts`**
 
 ```ts
-import { signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken } from '../../src/auth/jwt';
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyAccessToken,
+  verifyRefreshToken,
+} from '../../src/auth/jwt';
 
 const SECRET_A = 'a'.repeat(32);
 const SECRET_R = 'b'.repeat(32);
 
 describe('jwt', () => {
   it('signs and verifies an access token', () => {
-    const token = signAccessToken({ sub: 'u1', email: 'a@b.c', role: 'user' }, { secret: SECRET_A, expiresIn: '1m' });
+    const token = signAccessToken(
+      { sub: 'u1', email: 'a@b.c', role: 'user' },
+      { secret: SECRET_A, expiresIn: '1m' },
+    );
     const payload = verifyAccessToken(token, { secret: SECRET_A });
     expect(payload.sub).toBe('u1');
     expect(payload.email).toBe('a@b.c');
@@ -1264,6 +1305,7 @@ git commit -m "feat(auth): JWT sign and verify"
 ## Task 11: Login/Refresh mutations
 
 **Files:**
+
 - Create: `src/auth/resolvers.ts`
 - Modify: `src/graphql/schema.ts` (add User/AuthPayload/mutations)
 - Modify: `src/graphql/resolvers.ts` (merge auth resolvers)
@@ -1309,11 +1351,7 @@ export const typeDefs = gql`
 import { eq, and, gt, isNull } from 'drizzle-orm';
 import { users, refreshTokens } from '../db/schema';
 import { hashPassword, verifyPassword } from './password';
-import {
-  signAccessToken,
-  signRefreshToken,
-  verifyRefreshToken,
-} from './jwt';
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from './jwt';
 import { randomBytes, createHash } from 'crypto';
 import type { AppContext } from '../context';
 
@@ -1338,11 +1376,7 @@ function ttlToMs(ttl: string): number {
 export function buildAuthResolvers(cfg: AuthConfig) {
   return {
     Mutation: {
-      login: async (
-        _: unknown,
-        args: { email: string; password: string },
-        ctx: AppContext,
-      ) => {
+      login: async (_: unknown, args: { email: string; password: string }, ctx: AppContext) => {
         const { rows } = await ctx.db.execute({
           sql: 'SELECT id, email, password_hash, role, active FROM users WHERE email = $1',
           args: [args.email],
@@ -1458,12 +1492,16 @@ async function seedUser() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const email = 'auth-test@local';
   const passwordHash = await hashPassword('test1234');
-  await pool.query('DELETE FROM refresh_tokens WHERE user_id IN (SELECT id FROM users WHERE email = $1)', [email]);
-  await pool.query('DELETE FROM users WHERE email = $1', [email]);
   await pool.query(
-    'INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3)',
-    [email, passwordHash, 'user'],
+    'DELETE FROM refresh_tokens WHERE user_id IN (SELECT id FROM users WHERE email = $1)',
+    [email],
   );
+  await pool.query('DELETE FROM users WHERE email = $1', [email]);
+  await pool.query('INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3)', [
+    email,
+    passwordHash,
+    'user',
+  ]);
   await pool.end();
   return { email, password: 'test1234' };
 }
@@ -1494,7 +1532,7 @@ describe('auth mutations', () => {
       variables: { e: 'auth-test@local', p: 'wrong' },
     });
     expect(res.errors).toBeDefined();
-    expect((res.errors![0].message)).toMatch(/Invalid credentials/);
+    expect(res.errors![0].message).toMatch(/Invalid credentials/);
   });
 });
 ```
@@ -1516,6 +1554,7 @@ git commit -m "feat(auth): login and refresh mutations with rotation"
 ## Task 12: Seed admin script
 
 **Files:**
+
 - Create: `scripts/seed-admin.ts`
 
 - [ ] **Step 1: Write `scripts/seed-admin.ts`**
@@ -1536,10 +1575,10 @@ async function main() {
     return;
   }
   const hash = await hashPassword(cfg.seed.adminPassword);
-  await pool.query(
-    `INSERT INTO users (email, password_hash, role) VALUES ($1, $2, 'admin')`,
-    [cfg.seed.adminEmail, hash],
-  );
+  await pool.query(`INSERT INTO users (email, password_hash, role) VALUES ($1, $2, 'admin')`, [
+    cfg.seed.adminEmail,
+    hash,
+  ]);
   console.log(`Seeded admin: ${cfg.seed.adminEmail}`);
   await pool.end();
 }
@@ -1572,6 +1611,7 @@ git commit -m "chore: seed-admin script"
 ## Task 13: Error mapping
 
 **Files:**
+
 - Create: `src/orchestrator/errors.ts`
 - Test: `tests/unit/orchestrator-errors.spec.ts`
 
@@ -1611,9 +1651,15 @@ describe('mapSascarError', () => {
   });
 
   it('maps timeout, connection, api, unknown', () => {
-    expect((mapSascarError(new FakeTimeoutErr() as any) as GraphQLError).extensions.code).toBe('SASCAR_TIMEOUT');
-    expect((mapSascarError(new FakeConnErr() as any) as GraphQLError).extensions.code).toBe('SASCAR_NETWORK');
-    expect((mapSascarError(new FakeApiErr() as any) as GraphQLError).extensions.code).toBe('SASCAR_FAULT');
+    expect((mapSascarError(new FakeTimeoutErr() as any) as GraphQLError).extensions.code).toBe(
+      'SASCAR_TIMEOUT',
+    );
+    expect((mapSascarError(new FakeConnErr() as any) as GraphQLError).extensions.code).toBe(
+      'SASCAR_NETWORK',
+    );
+    expect((mapSascarError(new FakeApiErr() as any) as GraphQLError).extensions.code).toBe(
+      'SASCAR_FAULT',
+    );
     expect((mapSascarError(new Error('x')) as GraphQLError).extensions.code).toBe('INTERNAL');
   });
 });
@@ -1636,11 +1682,18 @@ import {
   SascarTimeoutError,
 } from 'sascar-sdk';
 
-type SascarErr = SascarApiError | SascarAuthError | SascarRateLimitError | SascarTimeoutError | SascarConnectionError;
+type SascarErr =
+  | SascarApiError
+  | SascarAuthError
+  | SascarRateLimitError
+  | SascarTimeoutError
+  | SascarConnectionError;
 
 export function mapSascarError(err: unknown): GraphQLError {
   if (err instanceof SascarAuthError) {
-    return new GraphQLError('Credenciais Sascar inválidas', { extensions: { code: 'SASCAR_AUTH' } });
+    return new GraphQLError('Credenciais Sascar inválidas', {
+      extensions: { code: 'SASCAR_AUTH' },
+    });
   }
   if (err instanceof SascarRateLimitError) {
     const e = err as SascarRateLimitError & { retryAfter?: number };
@@ -1688,6 +1741,7 @@ git commit -m "feat(orchestrator): map Sascar SDK errors to GraphQL errors"
 ## Task 14: SascarOrchestrator with AsyncQueue
 
 **Files:**
+
 - Create: `src/orchestrator/SascarOrchestrator.ts`
 - Test: `tests/unit/SascarOrchestrator.spec.ts`
 - Modify: `src/server.ts` to construct the client
@@ -1751,11 +1805,14 @@ export interface ClientOptions {
 }
 
 export function buildSascarClient(opts: ClientOptions): SascarClient {
-  return new SascarClient({ usuario: opts.usuario, senha: opts.senha }, {
-    wsdlUrl: opts.wsdlUrl,
-    timeoutMs: opts.timeoutMs ?? 30_000,
-    maxRetries: opts.maxRetries ?? 3,
-  });
+  return new SascarClient(
+    { usuario: opts.usuario, senha: opts.senha },
+    {
+      wsdlUrl: opts.wsdlUrl,
+      timeoutMs: opts.timeoutMs ?? 30_000,
+      maxRetries: opts.maxRetries ?? 3,
+    },
+  );
 }
 
 export type SascarMethod = keyof SascarClient;
@@ -1881,6 +1938,7 @@ git commit -m "feat(orchestrator): SascarOrchestrator with AsyncQueue global"
 ## Task 15: request_log writer
 
 **Files:**
+
 - Create: `src/orchestrator/log.ts`
 - Test: `tests/integration/log.spec.ts`
 
@@ -1905,7 +1963,9 @@ describe('logRequest', () => {
       latencyMs: 12,
     });
 
-    const { rows } = await pool.query("SELECT method, status, cache_hit FROM request_log WHERE method = 'test.method'");
+    const { rows } = await pool.query(
+      "SELECT method, status, cache_hit FROM request_log WHERE method = 'test.method'",
+    );
     expect(rows[0].method).toBe('test.method');
     expect(rows[0].status).toBe('ok');
     expect(rows[0].cache_hit).toBe(false);
@@ -1970,6 +2030,7 @@ git commit -m "feat(orchestrator): request_log writer helper"
 ## Task 16: cachedQuery generic
 
 **Files:**
+
 - Create: `src/orchestrator/cache.ts`
 - Test: `tests/integration/cache.spec.ts`
 
@@ -2011,14 +2072,21 @@ describe('cachedQuery', () => {
 
   it('returns cache hit when expires_at > now()', async () => {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await pool.query(`INSERT INTO ${table} (id, nome, raw, fetched_at, expires_at) VALUES (1, 'X', '{}'::jsonb, now(), now() + interval '1 hour')`);
+    await pool.query(
+      `INSERT INTO ${table} (id, nome, raw, fetched_at, expires_at) VALUES (1, 'X', '{}'::jsonb, now(), now() + interval '1 hour')`,
+    );
     await pool.end();
 
     const db = { execute: (q: any) => pool2.query(q.sql, q.args) } as any;
     const pool2 = new Pool({ connectionString: process.env.DATABASE_URL });
     let fetcherCalls = 0;
     const result = await cachedQuery<{ id: number; nome: string }>(db, {
-      table, ttlMs: 60_000, fetcher: async () => { fetcherCalls++; return []; },
+      table,
+      ttlMs: 60_000,
+      fetcher: async () => {
+        fetcherCalls++;
+        return [];
+      },
       fromRows: (rows: any[]) => rows.map((r) => ({ id: r.id, nome: r.nome })),
     });
     expect(result.length).toBe(1);
@@ -2031,7 +2099,9 @@ describe('cachedQuery', () => {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const db = { execute: (q: any) => pool.query(q.sql, q.args) } as any;
     const result = await cachedQuery<{ id: number; nome: string }>(db, {
-      table, ttlMs: 60_000, fetcher: async () => [{ id: 99, nome: 'Fresh' } as any],
+      table,
+      ttlMs: 60_000,
+      fetcher: async () => [{ id: 99, nome: 'Fresh' } as any],
       fromRows: (rows: any[]) => rows.map((r) => ({ id: r.id, nome: r.nome })),
     });
     expect(result.length).toBe(1);
@@ -2075,7 +2145,13 @@ export async function cachedQuery<T, TRow = any>(
   } as any);
 
   if (cached.length) {
-    await logRequest(db, { method: opts.method, source: 'graphql', status: 'cache_hit', cacheHit: true, latencyMs: Date.now() - start });
+    await logRequest(db, {
+      method: opts.method,
+      source: 'graphql',
+      status: 'cache_hit',
+      cacheHit: true,
+      latencyMs: Date.now() - start,
+    });
     return opts.fromRows(cached as any[]);
   }
 
@@ -2094,7 +2170,13 @@ export async function cachedQuery<T, TRow = any>(
       args: [...values, expiresAt],
     } as any);
   }
-  await logRequest(db, { method: opts.method, source: 'graphql', status: 'ok', cacheHit: false, latencyMs: Date.now() - start });
+  await logRequest(db, {
+    method: opts.method,
+    source: 'graphql',
+    status: 'ok',
+    cacheHit: false,
+    latencyMs: Date.now() - start,
+  });
   return fresh;
 }
 ```
@@ -2116,6 +2198,7 @@ git commit -m "feat(orchestrator): generic cachedQuery with TTL"
 ## Task 17: Cadastros migration + domain (clientes, veiculos, motoristas)
 
 **Files:**
+
 - Create: `src/db/migrations/0002_cadastros_cache.sql`
 - Modify: `src/db/schema.ts`
 - Create: `src/domain/clientes.ts`
@@ -2188,7 +2271,11 @@ export async function getClientes(
     table: 'clientes_cache',
     ttlMs: 60_000, // overridden via cfg
     method: 'obterClientesV2',
-    fetcher: () => ctx.orchestrator.call<any[]>('obterClientesV2', [args.quantidade ?? 1000, args.idCliente ?? null]),
+    fetcher: () =>
+      ctx.orchestrator.call<any[]>('obterClientesV2', [
+        args.quantidade ?? 1000,
+        args.idCliente ?? null,
+      ]),
     toRow: (c) => ({
       id_cliente: c.idCliente,
       cnpj: c.cnpj ?? null,
@@ -2196,14 +2283,15 @@ export async function getClientes(
       nome: c.nome,
       raw: c,
     }),
-    fromRows: (rs) => rs.map((r) => ({
-      idCliente: r.id_cliente,
-      cnpj: r.cnpj,
-      cpf: r.cpf,
-      nome: r.nome,
-      fetchedAt: r.fetched_at,
-      expiresAt: r.expires_at,
-    })),
+    fromRows: (rs) =>
+      rs.map((r) => ({
+        idCliente: r.id_cliente,
+        cnpj: r.cnpj,
+        cpf: r.cpf,
+        nome: r.nome,
+        fetchedAt: r.fetched_at,
+        expiresAt: r.expires_at,
+      })),
   });
   return rows;
 }
@@ -2233,7 +2321,11 @@ export async function getVeiculos(
     table: 'veiculos_cache',
     ttlMs: 60_000,
     method: 'obterVeiculos',
-    fetcher: () => ctx.orchestrator.call<any[]>('obterVeiculos', [args.quantidade ?? 1000, args.idVeiculo ?? null]),
+    fetcher: () =>
+      ctx.orchestrator.call<any[]>('obterVeiculos', [
+        args.quantidade ?? 1000,
+        args.idVeiculo ?? null,
+      ]),
     toRow: (v) => ({
       id_veiculo: v.idVeiculo,
       placa: v.placa,
@@ -2242,15 +2334,16 @@ export async function getVeiculos(
       id_equipamento: v.idEquipamento ?? null,
       raw: v,
     }),
-    fromRows: (rs) => rs.map((r) => ({
-      idVeiculo: r.id_veiculo,
-      placa: r.placa,
-      idCliente: r.id_cliente,
-      descricao: r.descricao,
-      idEquipamento: r.id_equipamento,
-      fetchedAt: r.fetched_at,
-      expiresAt: r.expires_at,
-    })),
+    fromRows: (rs) =>
+      rs.map((r) => ({
+        idVeiculo: r.id_veiculo,
+        placa: r.placa,
+        idCliente: r.id_cliente,
+        descricao: r.descricao,
+        idEquipamento: r.id_equipamento,
+        fetchedAt: r.fetched_at,
+        expiresAt: r.expires_at,
+      })),
   });
 }
 ```
@@ -2277,20 +2370,25 @@ export async function getMotoristas(
     table: 'motoristas_cache',
     ttlMs: 60_000,
     method: 'obterMotoristas',
-    fetcher: () => ctx.orchestrator.call<any[]>('obterMotoristas', [args.quantidade ?? 1000, args.idMotorista ?? null]),
+    fetcher: () =>
+      ctx.orchestrator.call<any[]>('obterMotoristas', [
+        args.quantidade ?? 1000,
+        args.idMotorista ?? null,
+      ]),
     toRow: (m) => ({
       id_motorista: m.idMotorista,
       nome: m.nome,
       tipo_documento: m.tipoDocumento ?? null,
       raw: m,
     }),
-    fromRows: (rs) => rs.map((r) => ({
-      idMotorista: r.id_motorista,
-      nome: r.nome,
-      tipoDocumento: r.tipo_documento,
-      fetchedAt: r.fetched_at,
-      expiresAt: r.expires_at,
-    })),
+    fromRows: (rs) =>
+      rs.map((r) => ({
+        idMotorista: r.id_motorista,
+        nome: r.nome,
+        tipoDocumento: r.tipo_documento,
+        fetchedAt: r.fetched_at,
+        expiresAt: r.expires_at,
+      })),
   });
 }
 ```
@@ -2304,7 +2402,12 @@ import { buildTestServer } from '../helpers/server';
 import { buildSascarClient, SascarOrchestrator } from '../../src/orchestrator/SascarOrchestrator';
 
 function buildCtxWithMockOrch(orchestrator: SascarOrchestrator) {
-  return { user: null, logger: console, db: { execute: (q: any) => poolQuery(q.sql, q.args) } as any, orchestrator };
+  return {
+    user: null,
+    logger: console,
+    db: { execute: (q: any) => poolQuery(q.sql, q.args) } as any,
+    orchestrator,
+  };
 }
 
 const poolQuery = (() => {
@@ -2319,11 +2422,13 @@ describe('cadastros resolvers (with mocked Sascar)', () => {
   afterEach(() => nock.cleanAll());
 
   it('clientes returns cached data when present', async () => {
-    nock('https://sasintegra.sascar.com.br')
-      .post(/.*/)
-      .reply(200, '<xml>[]</xml>');
+    nock('https://sasintegra.sascar.com.br').post(/.*/).reply(200, '<xml>[]</xml>');
 
-    const sascar = buildSascarClient({ usuario: 'u', senha: 's', wsdlUrl: 'https://sasintegra.sascar.com.br/x' });
+    const sascar = buildSascarClient({
+      usuario: 'u',
+      senha: 's',
+      wsdlUrl: 'https://sasintegra.sascar.com.br/x',
+    });
     const orch = new SascarOrchestrator(sascar);
     const ctx = buildCtxWithMockOrch(orch);
     // Pre-seed cache
@@ -2334,7 +2439,9 @@ describe('cadastros resolvers (with mocked Sascar)', () => {
        VALUES (1, '123', null, 'Cliente Y', '{}'::jsonb, now(), now() + interval '1 hour')`,
     );
     const { executeOperation } = await buildTestServer();
-    const res = await executeOperation({ query: '{ clientes(quantidade: 10) { idCliente nome } }' });
+    const res = await executeOperation({
+      query: '{ clientes(quantidade: 10) { idCliente nome } }',
+    });
     expect(res.errors).toBeUndefined();
     expect((res.data as any).clientes[0].nome).toBe('Cliente Y');
     await pool.end();
@@ -2355,7 +2462,12 @@ import { loadConfig } from '../config';
 import type { AppContext } from '../context';
 
 const cfg = loadConfig();
-const auth = buildAuthResolvers({ accessSecret: cfg.jwt.accessSecret, refreshSecret: cfg.jwt.refreshSecret, accessTtl: cfg.jwt.accessTtl, refreshTtl: cfg.jwt.refreshTtl });
+const auth = buildAuthResolvers({
+  accessSecret: cfg.jwt.accessSecret,
+  refreshSecret: cfg.jwt.refreshSecret,
+  accessTtl: cfg.jwt.accessTtl,
+  refreshTtl: cfg.jwt.refreshTtl,
+});
 
 export const resolvers = {
   Query: {
@@ -2376,9 +2488,30 @@ export const resolvers = {
 Also extend `src/graphql/schema.ts`:
 
 ```graphql
-type Cliente { idCliente: Int! cnpj: String cpf: String nome: String! fetchedAt: DateTime! expiresAt: DateTime! }
-type Veiculo { idVeiculo: Int! placa: String! idCliente: Int descricao: String idEquipamento: Int fetchedAt: DateTime! expiresAt: DateTime! }
-type Motorista { idMotorista: Int! nome: String! tipoDocumento: String fetchedAt: DateTime! expiresAt: DateTime! }
+type Cliente {
+  idCliente: Int!
+  cnpj: String
+  cpf: String
+  nome: String!
+  fetchedAt: DateTime!
+  expiresAt: DateTime!
+}
+type Veiculo {
+  idVeiculo: Int!
+  placa: String!
+  idCliente: Int
+  descricao: String
+  idEquipamento: Int
+  fetchedAt: DateTime!
+  expiresAt: DateTime!
+}
+type Motorista {
+  idMotorista: Int!
+  nome: String!
+  tipoDocumento: String
+  fetchedAt: DateTime!
+  expiresAt: DateTime!
+}
 
 extend type Query {
   clientes(idCliente: Int, quantidade: Int = 1000): [Cliente!]!
@@ -2404,6 +2537,7 @@ git commit -m "feat(domain): clientes, veiculos, motoristas with cache"
 ## Task 18: Posições migration + domain with cursor
 
 **Files:**
+
 - Create: `src/db/migrations/0003_posicoes.sql`
 - Create: `src/domain/posicoes.ts`
 - Test: `tests/integration/posicoes.spec.ts`
@@ -2478,11 +2612,20 @@ export async function getPosicoesRecentes(ctx: AppContext, quantity: number): Pr
     args: [quantity],
   } as any);
   if (fresh.length) {
-    await logRequest(ctx.db, { method: METHOD, source: 'graphql', status: 'cache_hit', cacheHit: true, latencyMs: Date.now() - start });
+    await logRequest(ctx.db, {
+      method: METHOD,
+      source: 'graphql',
+      status: 'cache_hit',
+      cacheHit: true,
+      latencyMs: Date.now() - start,
+    });
     return mapPosicoes(fresh);
   }
   // 2. Cache miss: fetch from Sascar
-  const veiculos = await pool.execute({ sql: 'SELECT id_veiculo FROM veiculos_cache', args: [] } as any);
+  const veiculos = await pool.execute({
+    sql: 'SELECT id_veiculo FROM veiculos_cache',
+    args: [],
+  } as any);
   for (const v of veiculos.rows as any[]) {
     await fetchAndUpsertPosicoes(ctx, v.id_veiculo);
   }
@@ -2490,7 +2633,13 @@ export async function getPosicoesRecentes(ctx: AppContext, quantity: number): Pr
     sql: `SELECT * FROM posicoes ORDER BY data_posicao DESC LIMIT $1`,
     args: [quantity],
   } as any);
-  await logRequest(ctx.db, { method: METHOD, source: 'graphql', status: 'ok', cacheHit: false, latencyMs: Date.now() - start });
+  await logRequest(ctx.db, {
+    method: METHOD,
+    source: 'graphql',
+    status: 'ok',
+    cacheHit: false,
+    latencyMs: Date.now() - start,
+  });
   return mapPosicoes(rows);
 }
 
@@ -2504,7 +2653,9 @@ export async function fetchAndUpsertPosicoes(ctx: AppContext, idVeiculo: number)
   const idInicio = lastId + 1;
   const posicoes = await ctx.orchestrator
     .call<any[]>(METHOD, [idInicio, Number.MAX_SAFE_INTEGER, 1000])
-    .catch((err) => { throw mapSascarError(err); });
+    .catch((err) => {
+      throw mapSascarError(err);
+    });
 
   for (const p of posicoes) {
     await pool.execute({
@@ -2512,7 +2663,20 @@ export async function fetchAndUpsertPosicoes(ctx: AppContext, idVeiculo: number)
             (id_pacote, id_veiculo, data_posicao, data_pacote, latitude, longitude, velocidade, ignicao, direcao, odometro, horimetro, raw, synced_via)
             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'graphql')
             ON CONFLICT (id_veiculo, id_pacote) DO NOTHING`,
-      args: [p.idPacote, p.idVeiculo, p.dataPosicao, p.dataPacote, p.latitude, p.longitude, p.velocidade, p.ignicao ?? null, p.direcao ?? null, p.odometro ?? null, p.horimetro ?? null, JSON.stringify(p)],
+      args: [
+        p.idPacote,
+        p.idVeiculo,
+        p.dataPosicao,
+        p.dataPacote,
+        p.latitude,
+        p.longitude,
+        p.velocidade,
+        p.ignicao ?? null,
+        p.direcao ?? null,
+        p.odometro ?? null,
+        p.horimetro ?? null,
+        JSON.stringify(p),
+      ],
     } as any);
   }
   if (posicoes.length) {
@@ -2562,11 +2726,15 @@ describe('posicoes domain (mocked Sascar)', () => {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     await pool.query('DELETE FROM posicoes');
     await pool.query('DELETE FROM sync_cursor');
-    await pool.query(`INSERT INTO veiculos_cache (id_veiculo, placa, raw, fetched_at, expires_at) VALUES (777, 'AAA1111', '{}'::jsonb, now(), now() + interval '1 day') ON CONFLICT (id_veiculo) DO NOTHING`);
+    await pool.query(
+      `INSERT INTO veiculos_cache (id_veiculo, placa, raw, fetched_at, expires_at) VALUES (777, 'AAA1111', '{}'::jsonb, now(), now() + interval '1 day') ON CONFLICT (id_veiculo) DO NOTHING`,
+    );
 
     nock(SASCAR_URL)
       .post(/.*/)
-      .reply(200, `<?xml version="1.0"?>
+      .reply(
+        200,
+        `<?xml version="1.0"?>
         <S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
           <S:Body>
             <obterPacotePosicaoPorRangeJSONResponse>
@@ -2576,16 +2744,26 @@ describe('posicoes domain (mocked Sascar)', () => {
               ]</return>
             </obterPacotePosicaoPorRangeJSONResponse>
           </S:Body>
-        </S:Envelope>`);
+        </S:Envelope>`,
+      );
 
     const sascar = buildSascarClient({ usuario: 'u', senha: 's', wsdlUrl: `${SASCAR_URL}/x` });
     const orch = new SascarOrchestrator(sascar);
-    const ctx = { user: null, logger: console, db: { execute: (q: any) => pool.query(q.sql, q.args) } as any, orchestrator: orch };
+    const ctx = {
+      user: null,
+      logger: console,
+      db: { execute: (q: any) => pool.query(q.sql, q.args) } as any,
+      orchestrator: orch,
+    };
     const n = await fetchAndUpsertPosicoes(ctx, 777);
     expect(n).toBe(2);
-    const { rows } = await pool.query('SELECT count(*)::int as c FROM posicoes WHERE id_veiculo = 777');
+    const { rows } = await pool.query(
+      'SELECT count(*)::int as c FROM posicoes WHERE id_veiculo = 777',
+    );
     expect(rows[0].c).toBe(2);
-    const { rows: cur } = await pool.query('SELECT last_id_pacote FROM sync_cursor WHERE id_veiculo = 777');
+    const { rows: cur } = await pool.query(
+      'SELECT last_id_pacote FROM sync_cursor WHERE id_veiculo = 777',
+    );
     expect(Number(cur[0].last_id_pacote)).toBe(1002);
     await pool.end();
   });
@@ -2609,6 +2787,7 @@ git commit -m "feat(domain): posicoes with cursor-based sync"
 ## Task 19: Background job (syncPositions)
 
 **Files:**
+
 - Create: `src/jobs/cron.ts`
 - Create: `src/jobs/syncPositions.ts`
 - Test: `tests/integration/syncPositions.spec.ts`
@@ -2650,14 +2829,23 @@ export function startSyncPositions(cfg: JobConfig): ScheduledTask | null {
       const pool = new Pool({ connectionString: appCfg.db.url });
       const { rows } = await pool.query('SELECT id_veiculo FROM veiculos_cache');
       let total = 0;
-      const ctx = { user: null, logger, db: { execute: (q: any) => pool.query(q.sql, q.args) } as any, orchestrator: orch };
+      const ctx = {
+        user: null,
+        logger,
+        db: { execute: (q: any) => pool.query(q.sql, q.args) } as any,
+        orchestrator: orch,
+      };
       for (const v of rows as any[]) {
         const n = await fetchAndUpsertPosicoes(ctx, v.id_veiculo);
         total += n;
       }
       await logRequest(ctx.db, {
-        method: 'syncPositions.cron', source: 'cron', status: 'ok', cacheHit: false,
-        latencyMs: Date.now() - start, args: { total },
+        method: 'syncPositions.cron',
+        source: 'cron',
+        status: 'ok',
+        cacheHit: false,
+        latencyMs: Date.now() - start,
+        args: { total },
       });
       await pool.end();
       logger.info({ total, ms: Date.now() - start }, 'syncPositions completed');
@@ -2680,7 +2868,11 @@ import { loadConfig } from '../config';
 export function startAllJobs() {
   const cfg = loadConfig();
   const tasks: cron.ScheduledTask[] = [];
-  const t1 = startSyncPositions({ enabled: cfg.job.enabled, cronExpr: cfg.job.cron, quantity: cfg.job.quantity });
+  const t1 = startSyncPositions({
+    enabled: cfg.job.enabled,
+    cronExpr: cfg.job.cron,
+    quantity: cfg.job.quantity,
+  });
   if (t1) tasks.push(t1);
   return tasks;
 }
@@ -2722,6 +2914,7 @@ git commit -m "feat(jobs): 10-min position sync (opt-in via env)"
 ## Task 20: GraphQL positions + syncStatus queries
 
 **Files:**
+
 - Modify: `src/graphql/schema.ts`
 - Modify: `src/graphql/resolvers.ts`
 - Test: `tests/integration/posicoes-query.spec.ts`
@@ -2827,7 +3020,9 @@ describe('posicoes GraphQL', () => {
 
   it('syncStatus returns cursor rows', async () => {
     const { executeOperation } = await buildTestServer();
-    const res = await executeOperation({ query: '{ syncStatus { method idVeiculo lastIdPacote } }' });
+    const res = await executeOperation({
+      query: '{ syncStatus { method idVeiculo lastIdPacote } }',
+    });
     expect(res.errors).toBeUndefined();
     expect(Array.isArray((res.data as any).syncStatus)).toBe(true);
   });
@@ -2851,6 +3046,7 @@ git commit -m "feat(graphql): posicoesRecentes, posicoesPorVeiculo, syncStatus"
 ## Task 21: Caixa preta @deprecated stub
 
 **Files:**
+
 - Create: `src/db/migrations/0004_caixa_preta.sql`
 - Create: `src/domain/caixaPreta.ts`
 - Modify: `src/graphql/schema.ts`
@@ -2922,8 +3118,14 @@ export async function getCaixaPretaEventos(
   });
   const where: string[] = [];
   const params: any[] = [];
-  if (args.idVeiculo) { params.push(args.idVeiculo); where.push(`id_veiculo = $${params.length}`); }
-  if (args.placa) { params.push(args.placa); where.push(`placa = $${params.length}`); }
+  if (args.idVeiculo) {
+    params.push(args.idVeiculo);
+    where.push(`id_veiculo = $${params.length}`);
+  }
+  if (args.placa) {
+    params.push(args.placa);
+    where.push(`placa = $${params.length}`);
+  }
   const sql = `SELECT * FROM caixa_preta_eventos ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY data_evento DESC NULLS LAST LIMIT 1000`;
   const { rows } = await (ctx.db as any).execute({ sql, args: params } as any);
   return (rows as any[]).map((r) => ({
@@ -3007,6 +3209,7 @@ git commit -m "feat(domain): caixa-preta stub marked @deprecated"
 ## Task 22: requestLog query
 
 **Files:**
+
 - Modify: `src/graphql/schema.ts`
 - Modify: `src/graphql/resolvers.ts`
 - Test: `tests/integration/request-log.spec.ts`
@@ -3067,9 +3270,13 @@ import { buildTestServer } from '../helpers/server';
 describe('requestLog query', () => {
   it('returns the most recent log entries', async () => {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await pool.query(`INSERT INTO request_log (method, source, status, cache_hit, latency_ms) VALUES ('test.foo', 'graphql', 'ok', false, 12)`);
+    await pool.query(
+      `INSERT INTO request_log (method, source, status, cache_hit, latency_ms) VALUES ('test.foo', 'graphql', 'ok', false, 12)`,
+    );
     const { executeOperation } = await buildTestServer();
-    const res = await executeOperation({ query: '{ requestLog(limit: 5, method: "test.foo") { method status } }' });
+    const res = await executeOperation({
+      query: '{ requestLog(limit: 5, method: "test.foo") { method status } }',
+    });
     expect(res.errors).toBeUndefined();
     const rows = (res.data as any).requestLog;
     expect(rows.length).toBeGreaterThan(0);
@@ -3097,6 +3304,7 @@ git commit -m "feat(graphql): requestLog audit query"
 ## Task 23: Graceful shutdown
 
 **Files:**
+
 - Create: `src/lib/shutdown.ts`
 - Modify: `src/index.ts`
 - Test: `tests/integration/shutdown.spec.ts`
@@ -3117,12 +3325,18 @@ export function installShutdown(handle: ShutdownHandle): void {
     process.once(sig, async () => {
       console.log(`[shutdown] received ${sig}, stopping...`);
       for (const t of handle.tasks) {
-        try { t.stop(); } catch (e) { console.error('cron stop failed', e); }
+        try {
+          t.stop();
+        } catch (e) {
+          console.error('cron stop failed', e);
+        }
       }
       try {
         await Promise.race([
           handle.stopServer(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('shutdown timeout')), 60_000)),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('shutdown timeout')), 60_000),
+          ),
         ]);
       } catch (e) {
         console.error('server stop failed', e);
@@ -3173,6 +3387,7 @@ Expected: PASS.
 - [ ] **Step 5: Smoke-test the actual server**
 
 Run:
+
 ```
 export $(grep -v '^#' .env.example | xargs)
 npx tsx src/index.ts &
@@ -3184,6 +3399,7 @@ kill -TERM $SERVER_PID
 wait $SERVER_PID
 echo done
 ```
+
 Expected: response contains `{"data":{"health":"ok"}}` and then `done` (clean exit).
 
 - [ ] **Step 6: Commit**
@@ -3198,6 +3414,7 @@ git commit -m "feat(lib): graceful shutdown + bootstrap"
 ## Task 24: Documentation (docs/api.md)
 
 **Files:**
+
 - Create: `docs/api.md`
 
 - [ ] **Step 1: Write `docs/api.md`**
@@ -3215,6 +3432,7 @@ Tokens são obtidos via `mutation login` ou `mutation refresh`.
 ## Queries
 
 ### Cadastros (cache TTL 24h)
+
 - `clientes(idCliente: Int, quantidade: Int = 1000): [Cliente!]!`
 - `veiculos(idVeiculo: Int, quantidade: Int = 1000): [Veiculo!]!`
 - `motoristas(idMotorista: Int, quantidade: Int = 1000): [Motorista!]!`
@@ -3222,11 +3440,13 @@ Tokens são obtidos via `mutation login` ou `mutation refresh`.
 - `pontosReferencia: [PontoReferencia!]!`
 
 ### Posições
+
 - `posicoesRecentes(quantidade: Int = 1000): [Posicao!]!`
 - `posicoesPorVeiculo(idVeiculo: Int!, dataInicio: DateTime!, dataFim: DateTime!): [Posicao!]!`
 - `posicoesPorRange(idInicio: Int!, idFim: Int!, quantidade: Int = 1000): [Posicao!]!`
 
 ### Auditoria / status
+
 - `requestLog(limit: Int = 100, method: String): [RequestLogEntry!]!`
 - `syncStatus: [SyncCursor!]!`
 
@@ -3237,12 +3457,12 @@ Tokens são obtidos via `mutation login` ou `mutation refresh`.
 
 ## Métodos descontinuados (SasIntegra v2.07)
 
-| Query/Mutation GraphQL | Método SDK                       | Status Sascar                              | Substituir por                                  |
-|------------------------|----------------------------------|--------------------------------------------|-------------------------------------------------|
-| `caixaPretaEventos`    | `recuperarEventosCaixaPreta`     | Parcial — `solicitar` (4.51) está desativado | `posicoesRecentes`                            |
-| `caixaPretaEventos`    | `solicitarEventosCaixaPreta`     | DESATIVADO, sem previsão                   | sem substituto — não usar                       |
-| —                      | `obterDeltaTelemetriaIntegracao` | Descontinuado                              | `obterDeltaTelemetriaIntegracaoInercia`         |
-| `clientes`             | `obterClientes`                  | Compatibilidade LGPD                       | `clientesV2` (CNPJ alfanumérico)               |
+| Query/Mutation GraphQL | Método SDK                       | Status Sascar                                | Substituir por                          |
+| ---------------------- | -------------------------------- | -------------------------------------------- | --------------------------------------- |
+| `caixaPretaEventos`    | `recuperarEventosCaixaPreta`     | Parcial — `solicitar` (4.51) está desativado | `posicoesRecentes`                      |
+| `caixaPretaEventos`    | `solicitarEventosCaixaPreta`     | DESATIVADO, sem previsão                     | sem substituto — não usar               |
+| —                      | `obterDeltaTelemetriaIntegracao` | Descontinuado                                | `obterDeltaTelemetriaIntegracaoInercia` |
+| `clientes`             | `obterClientes`                  | Compatibilidade LGPD                         | `clientesV2` (CNPJ alfanumérico)        |
 
 A diretiva `@deprecated` está aplicada nos campos SDL correspondentes
 para que ferramentas (Apollo Studio, GraphiQL) exibam o aviso automaticamente.
@@ -3260,11 +3480,12 @@ git commit -m "docs: api.md with deprecation table"
 ## Task 25: README + final smoke test
 
 **Files:**
+
 - Create: `README.md`
 
 - [ ] **Step 1: Write `README.md`**
 
-```markdown
+````markdown
 # Api-Orquestrador Sascar
 
 API GraphQL (TypeScript) que orquestra chamadas ao `sascar-sdk` (SasIntegra v2.07).
@@ -3280,6 +3501,7 @@ npm run db:migrate
 npm run db:seed
 npm run dev
 ```
+````
 
 GraphQL Playground: http://localhost:4000
 
@@ -3310,7 +3532,8 @@ GraphQL Playground: http://localhost:4000
 
 Veja tabela em `docs/api.md`. Resumo: `solicitarEventosCaixaPreta` (4.51)
 e `obterDeltaTelemetriaIntegracao` (4.44) estão desativados na origem.
-```
+
+````
 
 - [ ] **Step 2: Run the full test suite**
 
@@ -3327,7 +3550,7 @@ Expected: All exit 0.
 ```bash
 git add README.md
 git commit -m "docs: README quickstart + commands"
-```
+````
 
 ---
 

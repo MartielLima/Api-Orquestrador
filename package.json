@@ -8,6 +8,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
+    "postinstall": "[ -f node_modules/sascar-sdk/dist/index.js ] || (cd node_modules/sascar-sdk && npm run build)",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "dev": "tsx watch src/index.ts",

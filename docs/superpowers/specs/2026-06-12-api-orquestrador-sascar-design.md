@@ -21,6 +21,7 @@ Um job em background (`node-cron`) atualiza as posições de todos os veículos 
 ## Objetivos e não-objetivos
 
 ### Objetivos
+
 1. Expor os métodos do `sascar-sdk` como Queries GraphQL tipadas. **v1 foca
    nos 30+ métodos mais usados (cadastros, posições, telemetria, comandos)**;
    o restante entra em spec futura. A meta final é cobrir todos os 63.
@@ -34,6 +35,7 @@ Um job em background (`node-cron`) atualiza as posições de todos os veículos 
 7. Manter a referência da caixa-preta (caixa preta) com aviso de depreciação.
 
 ### Não-objetivos (fora do escopo desta spec)
+
 - Multi-tenant (várias credenciais Sascar) — a API é single-tenant nesta versão.
 - Subscriptions GraphQL em tempo real — pode ser adicionado em spec futura.
 - Painel web / front-end.
@@ -56,11 +58,11 @@ Um job em background (`node-cron`) atualiza as posições de todos os veículos 
 Revisão do manual Michelin
 (`WebService_SasIntegra_v2.07_Portugues.pdf`, 290 páginas) revelou:
 
-| Seção | Método                          | Status na origem                          |
-|-------|---------------------------------|-------------------------------------------|
-| 4.44  | `obterDeltaTelemetriaIntegracao` | Descontinuado — usar `obterDeltaTelemetriaIntegracaoInercia` (4.60) |
-| 4.51  | `solicitarEventosCaixaPreta`    | DESATIVADO, sem previsão de liberação (SOAP Fault literal) |
-| 2.06→2.07 | `obterClientes`              | Mantido por compatibilidade (LGPD CNPJ alfanumérico) — recomendado usar `obterClientesV2` |
+| Seção     | Método                           | Status na origem                                                                          |
+| --------- | -------------------------------- | ----------------------------------------------------------------------------------------- |
+| 4.44      | `obterDeltaTelemetriaIntegracao` | Descontinuado — usar `obterDeltaTelemetriaIntegracaoInercia` (4.60)                       |
+| 4.51      | `solicitarEventosCaixaPreta`     | DESATIVADO, sem previsão de liberação (SOAP Fault literal)                                |
+| 2.06→2.07 | `obterClientes`                  | Mantido por compatibilidade (LGPD CNPJ alfanumérico) — recomendado usar `obterClientesV2` |
 
 **Implicação direta para a feature de "blackbox a cada 10 min" pedida pelo
 usuário:** o método `solicitarEventosCaixaPreta` está morto na origem. O método par
@@ -97,6 +99,7 @@ node-cron  --->  job syncPositions (a cada 10 min, opt-in)
 ```
 
 ### Princípios
+
 - 1 `SascarClient` por processo (singleton). Credenciais vêm de `SASCAR_USUARIO` /
   `SASCAR_SENHA` no `.env`.
 - 1 `AsyncQueue` global instanciada pelo nosso orquestrador enfileira **todas** as
@@ -110,20 +113,20 @@ node-cron  --->  job syncPositions (a cada 10 min, opt-in)
 
 ## Stack
 
-| Camada              | Escolha                                         |
-|---------------------|-------------------------------------------------|
-| Linguagem           | TypeScript 5.x                                  |
-| Runtime             | Node.js >= 18 (LTS)                             |
-| Servidor GraphQL    | Apollo Server 4                                 |
-| ORM / query builder | Drizzle ORM (PostgreSQL)                        |
-| Migrations          | Drizzle Kit                                     |
-| Banco               | PostgreSQL 16                                   |
-| Auth                | JWT (jsonwebtoken) + bcrypt (hash de senha)     |
-| Cron                | node-cron                                       |
-| Logger              | pino                                            |
-| Validação de env    | zod                                             |
-| Testes              | jest + supertest + nock (mock SOAP)             |
-| Lint/format         | ESLint + Prettier                               |
+| Camada              | Escolha                                     |
+| ------------------- | ------------------------------------------- |
+| Linguagem           | TypeScript 5.x                              |
+| Runtime             | Node.js >= 18 (LTS)                         |
+| Servidor GraphQL    | Apollo Server 4                             |
+| ORM / query builder | Drizzle ORM (PostgreSQL)                    |
+| Migrations          | Drizzle Kit                                 |
+| Banco               | PostgreSQL 16                               |
+| Auth                | JWT (jsonwebtoken) + bcrypt (hash de senha) |
+| Cron                | node-cron                                   |
+| Logger              | pino                                        |
+| Validação de env    | zod                                         |
+| Testes              | jest + supertest + nock (mock SOAP)         |
+| Lint/format         | ESLint + Prettier                           |
 
 > Drizzle foi escolhido sobre Prisma por ser mais leve, gerar SQL mais transparente
 > e ter migrations via SQL puro. Prisma é aceitável; decisão registrada para
@@ -252,6 +255,7 @@ CREATE INDEX idx_request_log_method ON request_log(method);
 ```
 
 ### Decisões de modelagem
+
 - **Uma tabela por método Sascar** (em vez de JSON-blob genérico) para permitir
   queries SQL úteis (ex: "última posição do veículo X"). A coluna `raw JSONB`
   guarda o payload completo para auditoria e evolução.
@@ -269,15 +273,71 @@ CREATE INDEX idx_request_log_method ON request_log(method);
 ```graphql
 scalar DateTime
 
-type AuthPayload { accessToken: String! refreshToken: String! user: User! }
-type User { id: ID! email: String! role: String! createdAt: DateTime! }
+type AuthPayload {
+  accessToken: String!
+  refreshToken: String!
+  user: User!
+}
+type User {
+  id: ID!
+  email: String!
+  role: String!
+  createdAt: DateTime!
+}
 
-type Cliente  { idCliente: Int! cnpj: String cpf: String nome: String! fetchedAt: DateTime! expiresAt: DateTime! }
-type Veiculo  { idVeiculo: Int! placa: String! idCliente: Int descricao: String idEquipamento: Int fetchedAt: DateTime! expiresAt: DateTime! }
-type Motorista{ idMotorista: Int! nome: String! tipoDocumento: String fetchedAt: DateTime! expiresAt: DateTime! }
-type Posicao  { idPacote: Int! idVeiculo: Int! dataPosicao: DateTime! dataPacote: DateTime! latitude: Float! longitude: Float! velocidade: Float! ignicao: Int direcao: Int odometro: Float syncedVia: String! }
-type SyncCursor { method: String! idVeiculo: Int! lastIdPacote: Int lastSyncedAt: DateTime! }
-type RequestLogEntry { id: ID! method: String! source: String! status: String! cacheHit: Boolean! latencyMs: Int createdAt: DateTime! error: String }
+type Cliente {
+  idCliente: Int!
+  cnpj: String
+  cpf: String
+  nome: String!
+  fetchedAt: DateTime!
+  expiresAt: DateTime!
+}
+type Veiculo {
+  idVeiculo: Int!
+  placa: String!
+  idCliente: Int
+  descricao: String
+  idEquipamento: Int
+  fetchedAt: DateTime!
+  expiresAt: DateTime!
+}
+type Motorista {
+  idMotorista: Int!
+  nome: String!
+  tipoDocumento: String
+  fetchedAt: DateTime!
+  expiresAt: DateTime!
+}
+type Posicao {
+  idPacote: Int!
+  idVeiculo: Int!
+  dataPosicao: DateTime!
+  dataPacote: DateTime!
+  latitude: Float!
+  longitude: Float!
+  velocidade: Float!
+  ignicao: Int
+  direcao: Int
+  odometro: Float
+  syncedVia: String!
+}
+type SyncCursor {
+  method: String!
+  idVeiculo: Int!
+  lastIdPacote: Int
+  lastSyncedAt: DateTime!
+}
+type RequestLogEntry {
+  id: ID!
+  method: String!
+  source: String!
+  status: String!
+  cacheHit: Boolean!
+  latencyMs: Int
+  createdAt: DateTime!
+  error: String
+}
 
 type CaixaPretaEvento {
   id: ID! @deprecated(reason: "Caixa-preta desativada na Sascar v2.07. Use posicoesRecentes.")
@@ -316,6 +376,7 @@ type Query {
 ## Fluxo de cache
 
 ### Cadastros (clientes, veículos, motoristas, ...)
+
 ```
 Resolver: clientes(idCliente, quantidade)
    |
@@ -338,6 +399,7 @@ Resolver: clientes(idCliente, quantidade)
 ```
 
 ### Posições (com cursor)
+
 ```
 Resolver: posicoesRecentes(quantidade)
    |
@@ -378,11 +440,13 @@ cron.schedule(process.env.SYNC_POSITIONS_CRON ?? '*/10 * * * *', async () => {
 ```
 
 **Variáveis de ambiente:**
+
 - `SYNC_POSITIONS_ENABLED` (`true`/`false`, default `false`)
 - `SYNC_POSITIONS_CRON` (default `*/10 * * * *`)
 - `SYNC_POSITIONS_QUANTITY` (default `1000`)
 
 **Por que não trava a aplicação:**
+
 - `node-cron` libera o event loop entre execuções.
 - A `AsyncQueue` global já serializa as chamadas SOAP.
 - Graceful shutdown: em `SIGTERM`, `cron.stop()` espera o tick corrente
@@ -411,8 +475,10 @@ unknown                -> GraphQLError code=INTERNAL
 Estratégia em duas camadas:
 
 ### 1. No schema GraphQL (SDL)
+
 A diretiva `@deprecated` aplica-se a **campos** (não a tipos), então marcamos
 os campos do tipo `CaixaPretaEvento` e a própria query `caixaPretaEventos`:
+
 ```graphql
 type CaixaPretaEvento {
   id: ID! @deprecated(reason: "Caixa-preta desativada na Sascar v2.07. Use posicoesRecentes.")
@@ -429,17 +495,19 @@ type Query {
     @deprecated(reason: "Método 4.51 da Sascar está desativado. Use posicoesRecentes.")
 }
 ```
+
 Ferramentas GraphQL (Apollo Studio, GraphiQL, etc.) exibem o aviso automaticamente
 em autocomplete e na aba "Schema".
 
 ### 2. No `docs/api.md` (gerado)
+
 Tabela fixa:
 | Query/Mutation GraphQL | Método SDK | Status Sascar | Substituir por |
 |------------------------|------------|---------------|----------------|
-| `caixaPretaEventos`    | `recuperarEventosCaixaPreta`  | Parcial — `solicitar` está desativado | `posicoesRecentes` |
-| `caixaPretaEventos`    | `solicitarEventosCaixaPreta`  | DESATIVADO, sem previsão | sem substituto — não usar |
-| —                      | `obterDeltaTelemetriaIntegracao` | Descontinuado           | `obterDeltaTelemetriaIntegracaoInercia` |
-| `clientes`             | `obterClientes`               | Compatibilidade LGPD    | `clientesV2` (CNPJ alfanumérico) |
+| `caixaPretaEventos` | `recuperarEventosCaixaPreta` | Parcial — `solicitar` está desativado | `posicoesRecentes` |
+| `caixaPretaEventos` | `solicitarEventosCaixaPreta` | DESATIVADO, sem previsão | sem substituto — não usar |
+| — | `obterDeltaTelemetriaIntegracao` | Descontinuado | `obterDeltaTelemetriaIntegracaoInercia` |
+| `clientes` | `obterClientes` | Compatibilidade LGPD | `clientesV2` (CNPJ alfanumérico) |
 
 ## Variáveis de ambiente (`.env.example`)
 
@@ -541,14 +609,14 @@ api-orquestrador/
 
 ## Riscos e trade-offs
 
-| Risco                                                  | Mitigação                                |
-|--------------------------------------------------------|------------------------------------------|
-| Sascar muda método/estrutura                          | versionamento do schema + `@deprecated` explícito |
-| Crescimento da tabela `posicoes`                       | partition por mês (estratégia p/ futuro, não na v1) |
-| Credenciais Sascar expostas em log                     | pino redact + nunca log do objeto de credenciais |
-| `SascarAuthError` em runtime (credenciais erradas)    | falhar rápido no startup, health check reporta |
-| Concorrência entre job e queries GraphQL               | `AsyncQueue` global garante serialização; UNIQUE constraint dedup |
-| Caixa-preta nunca mais volta                           | flag `DEPRECATED` clara; tabela fica vazia sem warning |
+| Risco                                              | Mitigação                                                         |
+| -------------------------------------------------- | ----------------------------------------------------------------- |
+| Sascar muda método/estrutura                       | versionamento do schema + `@deprecated` explícito                 |
+| Crescimento da tabela `posicoes`                   | partition por mês (estratégia p/ futuro, não na v1)               |
+| Credenciais Sascar expostas em log                 | pino redact + nunca log do objeto de credenciais                  |
+| `SascarAuthError` em runtime (credenciais erradas) | falhar rápido no startup, health check reporta                    |
+| Concorrência entre job e queries GraphQL           | `AsyncQueue` global garante serialização; UNIQUE constraint dedup |
+| Caixa-preta nunca mais volta                       | flag `DEPRECATED` clara; tabela fica vazia sem warning            |
 
 ## Próximos passos (após aprovação)
 
