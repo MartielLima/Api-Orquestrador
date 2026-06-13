@@ -13,6 +13,9 @@ coverage/
 
 # Compiled output (should not be in src/)
 src/**/*.js
+!src/scripts/postinstall.js
 src/**/*.js.map
+!src/scripts/*.js.map
 src/**/*.d.ts
+!src/scripts/*.d.ts
 src/**/*.d.ts.map
