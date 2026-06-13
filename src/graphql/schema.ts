@@ -43,11 +43,35 @@ export const typeDefs = gql`
     expiresAt: DateTime!
   }
 
+  type Posicao {
+    idPacote: Int!
+    idVeiculo: Int!
+    dataPosicao: DateTime!
+    dataPacote: DateTime!
+    latitude: Float!
+    longitude: Float!
+    velocidade: Float!
+    ignicao: Int
+    direcao: Int
+    odometro: Float
+    syncedVia: String!
+  }
+
+  type SyncCursor {
+    method: String!
+    idVeiculo: Int!
+    lastIdPacote: Int
+    lastSyncedAt: DateTime!
+  }
+
   type Query {
     health: String!
     clientes(idCliente: Int, quantidade: Int = 1000): [Cliente!]!
     veiculos(idVeiculo: Int, quantidade: Int = 1000): [Veiculo!]!
     motoristas(idMotorista: Int, quantidade: Int = 1000): [Motorista!]!
+    posicoesRecentes(quantidade: Int = 1000): [Posicao!]!
+    posicoesPorVeiculo(idVeiculo: Int!, dataInicio: DateTime!, dataFim: DateTime!): [Posicao!]!
+    syncStatus: [SyncCursor!]!
   }
 
   type Mutation {
