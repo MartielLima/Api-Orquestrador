@@ -14,6 +14,16 @@ Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue 
 - Type `User.active` e types `RefreshToken` / `CreateUserInput` / `UpdateUserInput` no SDL.
 - Validação zod para todas as mutations de user management.
 
+### TUI auth — sem login no terminal
+
+- A TUI assume que o operador já tem acesso ao container. Por isso **não há tela de login** no terminal.
+- `src/tui/api/bootstrap.ts` resolve o token nesta ordem:
+  1. `TUI_API_TOKEN` no env (uso direto, se já setado).
+  2. Sessão persistida em `env-paths('api-orquestrador').config/session.json` (carregada e validada, com `refresh` automático se o access token estiver perto de expirar).
+  3. Login silencioso via `SEED_ADMIN_EMAIL` + `SEED_ADMIN_PASSWORD` (mesmas vars usadas pelo seed da API). O token resultante é gravado no env do processo e persistido em `session.json` para execuções futuras.
+- `TUI_API_URL` opcional — default `http://localhost:4000/graphql`. Use `http://app:4000/graphql` se rodar dentro do mesmo docker-compose.
+- Tela de erro amigável é renderizada se o bootstrap falhar (rede indisponível, seed faltando, 401).
+
 ### Known limitations
 
 - Logout from TUI clears the session locally but does not revoke the refresh token on the server. The token expires naturally after `JWT_REFRESH_TTL` (default 7d) or is revoked by an admin via the TUI Tokens view. A dedicated `logout(refreshToken)` mutation is planned.

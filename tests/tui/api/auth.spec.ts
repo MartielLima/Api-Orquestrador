@@ -14,7 +14,13 @@ describe('auth session persistence', () => {
       apiUrl: 'http://localhost:4000/',
       accessToken: 'a'.repeat(40),
       refreshToken: 'b'.repeat(40),
-      user: { id: 'u1', email: 'a@b.dev', role: 'admin', active: true, createdAt: new Date().toISOString() },
+      user: {
+        id: 'u1',
+        email: 'a@b.dev',
+        role: 'admin',
+        active: true,
+        createdAt: new Date().toISOString(),
+      },
       accessTokenExp: Date.now() + 60_000,
     };
     saveSession(s);
@@ -27,7 +33,13 @@ describe('auth session persistence', () => {
       apiUrl: 'http://localhost:4000/',
       accessToken: 'a'.repeat(40),
       refreshToken: 'b'.repeat(40),
-      user: { id: 'u1', email: 'a@b.dev', role: 'admin', active: true, createdAt: new Date().toISOString() },
+      user: {
+        id: 'u1',
+        email: 'a@b.dev',
+        role: 'admin',
+        active: true,
+        createdAt: new Date().toISOString(),
+      },
       accessTokenExp: Date.now() - 1,
     };
     saveSession(s);
@@ -36,7 +48,9 @@ describe('auth session persistence', () => {
 
   it('clearSession removes the file', () => {
     saveSession({
-      apiUrl: 'http://x', accessToken: 'a', refreshToken: 'b',
+      apiUrl: 'http://x',
+      accessToken: 'a',
+      refreshToken: 'b',
       user: { id: 'u', email: 'a', role: 'admin', active: true, createdAt: '' },
       accessTokenExp: Date.now() + 60_000,
     });

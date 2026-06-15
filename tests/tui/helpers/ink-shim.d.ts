@@ -45,14 +45,58 @@ export const Box: (props: BoxProps) => ReactElement;
 
 export const Spacer: () => ReactElement;
 export const Newline: (props: { count?: number }) => ReactElement;
-export const Static: (props: { items: ReactNodeArray; children: (item: unknown, index: number) => ReactNode }) => ReactElement;
-export const Transform: (props: { transform: (text: string) => string; children?: ReactNode }) => ReactElement;
+export const Static: (props: {
+  items: ReactNodeArray;
+  children: (item: unknown, index: number) => ReactNode;
+}) => ReactElement;
+export const Transform: (props: {
+  transform: (text: string) => string;
+  children?: ReactNode;
+}) => ReactElement;
 
-export const useInput: (handler: (input: string, key: { upArrow: boolean; downArrow: boolean; leftArrow: boolean; rightArrow: boolean; return: boolean; escape: boolean; ctrl: boolean; shift: boolean; tab: boolean; backspace: boolean; delete: boolean; meta: boolean }) => void, options?: { isActive?: boolean }) => void;
+export const useInput: (
+  handler: (
+    input: string,
+    key: {
+      upArrow: boolean;
+      downArrow: boolean;
+      leftArrow: boolean;
+      rightArrow: boolean;
+      return: boolean;
+      escape: boolean;
+      ctrl: boolean;
+      shift: boolean;
+      tab: boolean;
+      backspace: boolean;
+      delete: boolean;
+      meta: boolean;
+    },
+  ) => void,
+  options?: { isActive?: boolean },
+) => void;
 
 export const useApp: () => { exit: (error?: Error) => void };
-export const useStdin: () => { isTTY: boolean; write: (data: string) => void; setEncoding: (encoding: string) => void; setRawMode: (mode: boolean) => void };
+export const useStdin: () => {
+  isTTY: boolean;
+  write: (data: string) => void;
+  setEncoding: (encoding: string) => void;
+  setRawMode: (mode: boolean) => void;
+};
 export const useStdout: () => { write: (data: string) => void };
 export const useStderr: () => { write: (data: string) => void };
 
-export const render: (tree: ReactElement, options?: { stdout?: unknown; stderr?: unknown; exitOnCtrlC?: boolean; patchConsole?: boolean; debug?: boolean }) => { rerender: (tree: ReactElement) => void; unmount: () => void; waitUntilExit: () => Promise<void>; cleanup: () => void };
+export const render: (
+  tree: ReactElement,
+  options?: {
+    stdout?: unknown;
+    stderr?: unknown;
+    exitOnCtrlC?: boolean;
+    patchConsole?: boolean;
+    debug?: boolean;
+  },
+) => {
+  rerender: (tree: ReactElement) => void;
+  unmount: () => void;
+  waitUntilExit: () => Promise<void>;
+  cleanup: () => void;
+};

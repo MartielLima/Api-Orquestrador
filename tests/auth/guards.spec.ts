@@ -14,7 +14,9 @@ function makeCtx(role: string | null): AppContext {
 describe('guards', () => {
   it('requireAuth throws UNAUTHENTICATED when user is null', () => {
     expect(() => requireAuth(makeCtx(null))).toThrow(UserError);
-    try { requireAuth(makeCtx(null)); } catch (e) {
+    try {
+      requireAuth(makeCtx(null));
+    } catch (e) {
       expect((e as UserError).code).toBe(UserErrorCode.UNAUTHENTICATED);
     }
   });
@@ -25,7 +27,9 @@ describe('guards', () => {
   });
 
   it('requireAdmin throws FORBIDDEN for non-admin', () => {
-    try { requireAdmin(makeCtx('user')); } catch (e) {
+    try {
+      requireAdmin(makeCtx('user'));
+    } catch (e) {
       expect((e as UserError).code).toBe(UserErrorCode.FORBIDDEN);
     }
   });

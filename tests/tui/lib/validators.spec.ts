@@ -1,5 +1,9 @@
 import {
-  emailRule, passwordRule, createUserInputRule, updateUserInputRule, resetPasswordRule,
+  emailRule,
+  passwordRule,
+  createUserInputRule,
+  updateUserInputRule,
+  resetPasswordRule,
 } from '../../../src/tui/lib/validators';
 
 describe('tui validators', () => {
@@ -19,7 +23,11 @@ describe('tui validators', () => {
   });
 
   it('createUserInputRule validates object shape', () => {
-    const ok = createUserInputRule.safeParse({ email: 'a@b.dev', password: 'Aa1!aaaa', role: 'admin' });
+    const ok = createUserInputRule.safeParse({
+      email: 'a@b.dev',
+      password: 'Aa1!aaaa',
+      role: 'admin',
+    });
     expect(ok.success).toBe(true);
     const bad = createUserInputRule.safeParse({ email: 'bad', password: 'short', role: 'wizard' });
     expect(bad.success).toBe(false);

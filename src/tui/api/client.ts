@@ -8,14 +8,21 @@ export interface ApiClient {
 export function buildApiClient(endpoint: string): ApiClient {
   const client = new GraphQLClient(endpoint, { fetch: globalThis.fetch });
   let token: string | null = null;
+  const applyToken = (): void => {
+    if (token) {
+      client.setHeader('authorization', `Bearer ${token}`);
+    } else {
+      client.setHeader('authorization', '');
+    }
+  };
   return {
     async request<T>(doc: RequestDocument, variables?: Variables): Promise<T> {
-      const headers: Record<string, string> = {};
-      if (token) headers['authorization'] = `Bearer ${token}`;
-      return client.request<T>(doc, variables, headers);
+      applyToken();
+      return client.request<T>(doc, variables);
     },
     setAuthToken(t: string | null) {
       token = t;
+      applyToken();
     },
   };
 }

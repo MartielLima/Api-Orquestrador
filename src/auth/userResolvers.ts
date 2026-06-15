@@ -13,7 +13,11 @@ function mapUniqueViolation(e: unknown): UserError {
 }
 
 function rowToUser(r: Record<string, unknown>): {
-  id: string; email: string; role: string; active: boolean; createdAt: Date;
+  id: string;
+  email: string;
+  role: string;
+  active: boolean;
+  createdAt: Date;
 } {
   return {
     id: r.id as string,
@@ -72,7 +76,10 @@ export const userResolvers = {
       requireAdmin(ctx);
       const parsed = createUserSchema.safeParse(args.input);
       if (!parsed.success) {
-        throw new UserError(UserErrorCode.WEAK_PASSWORD, parsed.error.issues[0]?.message ?? 'invalid input');
+        throw new UserError(
+          UserErrorCode.WEAK_PASSWORD,
+          parsed.error.issues[0]?.message ?? 'invalid input',
+        );
       }
       try {
         const hash = await hashPassword(parsed.data.password);
@@ -95,7 +102,10 @@ export const userResolvers = {
       const me = requireAdmin(ctx);
       const parsed = updateUserSchema.safeParse(args.input);
       if (!parsed.success) {
-        throw new UserError(UserErrorCode.INVALID_INPUT, parsed.error.issues[0]?.message ?? 'invalid input');
+        throw new UserError(
+          UserErrorCode.INVALID_INPUT,
+          parsed.error.issues[0]?.message ?? 'invalid input',
+        );
       }
       if (args.id === me.id) {
         if (parsed.data.role && parsed.data.role !== 'admin') {
@@ -114,8 +124,14 @@ export const userResolvers = {
       const sets: string[] = [];
       const params: unknown[] = [];
       let i = 1;
-      if (parsed.data.role !== undefined) { sets.push(`role = $${i++}`); params.push(parsed.data.role); }
-      if (parsed.data.active !== undefined) { sets.push(`active = $${i++}`); params.push(parsed.data.active); }
+      if (parsed.data.role !== undefined) {
+        sets.push(`role = $${i++}`);
+        params.push(parsed.data.role);
+      }
+      if (parsed.data.active !== undefined) {
+        sets.push(`active = $${i++}`);
+        params.push(parsed.data.active);
+      }
       sets.push('updated_at = now()');
       params.push(args.id);
       const { rows } = await ctx.db.execute({
@@ -134,7 +150,10 @@ export const userResolvers = {
       requireAdmin(ctx);
       const parsed = resetPasswordSchema.safeParse({ newPassword: args.newPassword });
       if (!parsed.success) {
-        throw new UserError(UserErrorCode.WEAK_PASSWORD, parsed.error.issues[0]?.message ?? 'invalid input');
+        throw new UserError(
+          UserErrorCode.WEAK_PASSWORD,
+          parsed.error.issues[0]?.message ?? 'invalid input',
+        );
       }
       const hash = await hashPassword(parsed.data.newPassword);
       const { rows } = await ctx.db.execute({

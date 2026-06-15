@@ -62,7 +62,10 @@ describe('authPlugin', () => {
     const server = new ApolloServer({
       typeDefs: 'type Query { whoami: String }',
       resolvers: {
-        Query: { whoami: (_p: unknown, _a: unknown, ctx: { user: unknown }) => (ctx.user ? 'authed' : 'anon') },
+        Query: {
+          whoami: (_p: unknown, _a: unknown, ctx: { user: unknown }) =>
+            ctx.user ? 'authed' : 'anon',
+        },
       },
       plugins: [authPlugin({ accessSecret: SECRET })],
     });
@@ -70,7 +73,12 @@ describe('authPlugin', () => {
     const res = await server.executeOperation(
       {
         query: '{ whoami }',
-        http: { method: 'POST', headers: buildAuthHeader('not-a-jwt'), search: '', body: undefined },
+        http: {
+          method: 'POST',
+          headers: buildAuthHeader('not-a-jwt'),
+          search: '',
+          body: undefined,
+        },
       },
       { contextValue: { logger: console, db: {} as never, orchestrator: {} as never } as never },
     );
@@ -79,4 +87,3 @@ describe('authPlugin', () => {
     await server.stop();
   });
 });
-

@@ -40,11 +40,19 @@ export function loadSession(): PersistedSession | null {
 export function saveSession(s: PersistedSession): void {
   const p = sessionPath();
   fs.writeFileSync(p, JSON.stringify(s, null, 2), { mode: 0o600 });
-  try { fs.chmodSync(p, 0o600); } catch { /* windows no-op */ }
+  try {
+    fs.chmodSync(p, 0o600);
+  } catch {
+    /* windows no-op */
+  }
 }
 
 export function clearSession(): void {
-  try { fs.unlinkSync(sessionPath()); } catch { /* ignore */ }
+  try {
+    fs.unlinkSync(sessionPath());
+  } catch {
+    /* ignore */
+  }
 }
 
 function decodeJwtExp(token: string): number {
@@ -58,7 +66,10 @@ function decodeJwtExp(token: string): number {
 }
 
 export async function login(
-  api: ApiClient, apiUrl: string, email: string, password: string,
+  api: ApiClient,
+  apiUrl: string,
+  email: string,
+  password: string,
 ): Promise<PersistedSession> {
   type R = { login: { accessToken: string; refreshToken: string; user: AuthUser } };
   const data = await api.request<R>(M_LOGIN, { email, password });
@@ -73,7 +84,10 @@ export async function login(
   return session;
 }
 
-export async function refresh(api: ApiClient, current: PersistedSession): Promise<PersistedSession> {
+export async function refresh(
+  api: ApiClient,
+  current: PersistedSession,
+): Promise<PersistedSession> {
   type R = { refresh: { accessToken: string; refreshToken: string; user: AuthUser } };
   const data = await api.request<R>(M_REFRESH, { refreshToken: current.refreshToken });
   const session: PersistedSession = {

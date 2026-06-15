@@ -6,8 +6,16 @@ export interface RenderInstance {
   readonly unmount: () => void;
   readonly cleanup: () => void;
   readonly debug: () => void;
-  readonly stdout: { lastFrame: () => string | undefined; write: (chunk: string) => void; readonly frames: string[] };
-  readonly stderr: { lastFrame: () => string | undefined; write: (chunk: string) => void; readonly frames: string[] };
+  readonly stdout: {
+    lastFrame: () => string | undefined;
+    write: (chunk: string) => void;
+    readonly frames: string[];
+  };
+  readonly stderr: {
+    lastFrame: () => string | undefined;
+    write: (chunk: string) => void;
+    readonly frames: string[];
+  };
   readonly stdin: { write: (data: string) => void };
 }
 

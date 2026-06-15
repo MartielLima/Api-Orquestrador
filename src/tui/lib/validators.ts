@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 export const emailRule = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const passwordRule = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]{8,128}$/;
+export const passwordRule =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]{8,128}$/;
 
 export const roleRule = z.enum(['admin', 'user']);
 
