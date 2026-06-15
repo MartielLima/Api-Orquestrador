@@ -24,9 +24,18 @@ Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue 
 - `TUI_API_URL` opcional — default `http://localhost:4000/graphql`. Use `http://app:4000/graphql` se rodar dentro do mesmo docker-compose.
 - Tela de erro amigável é renderizada se o bootstrap falhar (rede indisponível, seed faltando, 401).
 
+### TUI views
+
+- **Usuários** (prioridade): lista com auto-refresh 30s, sort cyclable (`s`), navegação por linha (↑/↓), ações `n` (criar), `e` (editar role/active), `a` (toggle active com `<Confirm>`), `p` (reset senha, gera 16 chars ou manual), `t` (ver/revogar refresh tokens). Guard `isSelf` para CANNOT_DEMOTE_SELF e CANNOT_DEACTIVATE_SELF.
+- **Clientes, Veículos, Motoristas**: lista via `CadastroList<T>` genérico, polling 60s, `r` refresh.
+- **Posições**: tabs `recentes` (quantidade, polling 30s) e `por veículo` (idVeiculo + dataInicio + dataFim ISO 8601). Cap em 200 linhas.
+- **Logs**: filtros (method cyclable, status all/ok/error, follow ON/OFF), polling 2s quando follow ativo, `x` limpa filtros.
+- **Sync status**: tabela compacta dos `sync_cursor`, polling 10s.
+
 ### Known limitations
 
 - Logout from TUI clears the session locally but does not revoke the refresh token on the server. The token expires naturally after `JWT_REFRESH_TTL` (default 7d) or is revoked by an admin via the TUI Tokens view. A dedicated `logout(refreshToken)` mutation is planned.
+- Detalhe de linha (modal com JSON formatado) ainda não implementado nas views de cadastros. Colunas são fixas.
 
 ### Tests
 
