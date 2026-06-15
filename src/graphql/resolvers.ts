@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { buildAuthResolvers } from '../auth/resolvers';
+import { userResolvers } from '../auth/userResolvers';
 import { getClientes } from '../domain/clientes';
 import { getVeiculos } from '../domain/veiculos';
 import { getMotoristas } from '../domain/motoristas';
@@ -18,6 +19,7 @@ const auth = buildAuthResolvers({
 
 export const resolvers = {
   Query: {
+    ...userResolvers.Query,
     health: () => 'ok',
     clientes: (_: unknown, args: any, ctx: AppContext) => getClientes(ctx, args),
     veiculos: (_: unknown, args: any, ctx: AppContext) => getVeiculos(ctx, args),
@@ -90,6 +92,7 @@ export const resolvers = {
   },
   Mutation: {
     ...auth.Mutation,
+    ...userResolvers.Mutation,
   },
   DateTime: {
     __serialize: (v: unknown) => (v instanceof Date ? v.toISOString() : v),
