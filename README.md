@@ -4,11 +4,46 @@ API GraphQL (TypeScript) que orquestra chamadas ao `sascar-sdk` (SasIntegra v2.0
 
 ## Status
 
-**v0.1.0** — 25 tasks concluídas. 37 testes passando, lint/typecheck/prettier limpos.
+**v0.2.0** — backend ganha user management (admin-gated) e Apollo auth plugin que aplica o JWT no `ctx.user`. TUI Ink-based completa (`npm run tui`): 7 views navegáveis, gestão de usuários, logs, cadastros, posições, sync.
 
 Cobertura de métodos Sascar (v1): clientes, veículos, motoristas, posições (com cursor), caixa-preta (deprecated stub), comandos via macros (não expostos). Para expor mais dos 63 métodos do SDK, basta adicionar `Query` fields em `src/graphql/resolvers.ts` seguindo o padrão dos existentes.
 
 ## Quickstart
+
+### TUI (cockpit do terminal, sem Postman, sem curl, sem psql)
+
+```bash
+# dentro do container ou com a API rodando em http://localhost:4000/graphql
+npm run tui
+```
+
+A TUI assume que o operador já tem acesso ao container — **não há tela de login**. O token é resolvido por `src/tui/api/bootstrap.ts` nesta ordem:
+
+1. `TUI_API_TOKEN` (env) — uso direto.
+2. Sessão persistida em `env-paths('api-orquestrador').config/session.json` — recarrega + refresh se access token estiver perto de expirar.
+3. Login silencioso via `SEED_ADMIN_EMAIL` + `SEED_ADMIN_PASSWORD` (mesmas vars da API) — persiste em `session.json` para execuções futuras.
+
+Se tudo falhar, tela de erro amigável indica o que configurar. `TUI_API_URL` opcional (default `http://localhost:4000/graphql`).
+
+7 views, todas via teclado (sem mouse):
+
+| Tecla global | Ação |
+| --- | --- |
+| `1`–`7` | navegar entre views |
+| `Tab` / `Shift+Tab` | próxima / anterior |
+| `?` | help overlay (atalhos da view atual) |
+| `H` | toggle header |
+| `q` / `Ctrl+C` | sair |
+
+| View | Atalhos próprios |
+| --- | --- |
+| **Usuários** (1) | `n` novo · `e` editar · `a` ativar/desativar (com confirm) · `p` reset senha · `t` ver/revogar tokens · `s` cyclar sort · `r` refresh · `Enter` detalhe |
+| **Clientes** (2) · **Veículos** (3) · **Motoristas** (4) | `f` filtrar por id · `x` limpar filtro · `r` refresh · `Enter` detalhe |
+| **Posições** (5) | `Tab` alterna recentes/por veículo · `r` refresh · `Enter` detalhe |
+| **Logs** (6) | `m` cyclar método · `f` cyclar status · `s` follow on/off · `x` limpar filtros · `r` refresh |
+| **Sync** (7) | `r` refresh (polling 10s automático) |
+
+A status bar inferior mostra user, role, saúde da API, countdown do token, e relógio. Toasts verdes/vermelhos confirmam ações.
 
 ### Opção 1: Docker Compose (recomendado, zero setup local)
 
@@ -100,7 +135,8 @@ docker images api-orquestrador:0.1.0
 - `npm run dev` — desenvolvimento (tsx watch + SIGTERM clean)
 - `npm run build` — `tsc` → `dist/`
 - `npm start` — produção
-- `npm test` — jest (37 testes)
+- `npm run tui` — TUI (cockpit do terminal)
+- `npm test` — jest (66 backend + 50 TUI = 116 testes; 1 skipped)
 - `npm run typecheck` / `npm run lint` / `npm run format:check`
 - `npm run db:migrate` / `npm run db:seed` / `npm run db:reset`
 
@@ -152,9 +188,11 @@ A imagem (`api-orquestrador:0.1.0`) é multi-stage (Node 22-alpine):
 
 ## Documentação
 
-- **Spec de design**: `docs/superpowers/specs/2026-06-12-api-orquestrador-sascar-design.md`
-- **Plano de implementação**: `docs/superpowers/plans/2026-06-12-api-orquestrador-sascar.md`
-- **API GraphQL**: `docs/api.md`
+- **Spec de design (v1)**: `docs/superpowers/specs/2026-06-12-api-orquestrador-sascar-design.md`
+- **Spec de design (TUI)**: `docs/superpowers/specs/2026-06-15-tui-orquestrador-design.md`
+- **Plano de implementação (v1)**: `docs/superpowers/plans/2026-06-12-api-orquestrador-sascar.md`
+- **Plano de implementação (TUI)**: `docs/superpowers/plans/2026-06-15-tui-orquestrador.md`
+- **API GraphQL**: `docs/api.md` (inclui seção de user management admin-gated)
 - **Changelog**: `CHANGELOG.md`
 
 ## Métodos descontinuados (Sascar SasIntegra v2.07)
