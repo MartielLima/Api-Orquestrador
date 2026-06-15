@@ -6,6 +6,7 @@ import { buildContext, type AppContext } from './context';
 import { loadConfig } from './config';
 import { createLogger } from './lib/logger';
 import { SascarOrchestrator, buildSascarClient } from './orchestrator/SascarOrchestrator';
+import { authPlugin } from './auth/authPlugin';
 
 export interface StartedServer {
   url: string;
@@ -26,7 +27,11 @@ export async function startServer(): Promise<StartedServer> {
   });
   const orchestrator = new SascarOrchestrator(sascar);
 
-  const server = new ApolloServer({ typeDefs, resolvers });
+  const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    plugins: [authPlugin({ accessSecret: cfg.jwt.accessSecret })],
+  });
   const { url } = await startStandaloneServer(server, {
     context: async (): Promise<AppContext> => ({
       ...(await buildContext()),

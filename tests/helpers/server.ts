@@ -4,6 +4,8 @@ import { typeDefs } from '../../src/graphql/schema';
 import { resolvers } from '../../src/graphql/resolvers';
 import { buildContext } from '../../src/context';
 import { SascarOrchestrator, buildSascarClient } from '../../src/orchestrator/SascarOrchestrator';
+import { authPlugin } from '../../src/auth/authPlugin';
+import { loadConfig } from '../../src/config';
 
 export async function buildTestServer() {
   const ctx = await buildContext();
@@ -11,7 +13,12 @@ export async function buildTestServer() {
     buildSascarClient({ usuario: 'test', senha: 'test', wsdlUrl: 'http://localhost:0' }),
   );
   const ctxWithOrch = { ...ctx, orchestrator };
-  const server = new ApolloServer({ typeDefs, resolvers });
+  const cfg = loadConfig();
+  const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    plugins: [authPlugin({ accessSecret: cfg.jwt.accessSecret })],
+  });
   await server.start();
   const executeOperation = (request: { query: string; variables?: Record<string, unknown> }) =>
     server
