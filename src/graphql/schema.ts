@@ -7,6 +7,7 @@ export const typeDefs = gql`
     id: ID!
     email: String!
     role: String!
+    active: Boolean!
     createdAt: DateTime!
   }
 
@@ -14,6 +15,14 @@ export const typeDefs = gql`
     accessToken: String!
     refreshToken: String!
     user: User!
+  }
+
+  type RefreshToken {
+    id: ID!
+    userId: ID!
+    createdAt: DateTime!
+    expiresAt: DateTime!
+    revokedAt: DateTime
   }
 
   type Cliente {
@@ -85,8 +94,21 @@ export const typeDefs = gql`
     velocidade: Float
   }
 
+  input CreateUserInput {
+    email: String!
+    password: String!
+    role: String!
+  }
+
+  input UpdateUserInput {
+    role: String
+    active: Boolean
+  }
+
   type Query {
     health: String!
+    me: User!
+    users: [User!]!
     clientes(idCliente: Int, quantidade: Int = 1000): [Cliente!]!
     veiculos(idVeiculo: Int, quantidade: Int = 1000): [Veiculo!]!
     motoristas(idMotorista: Int, quantidade: Int = 1000): [Motorista!]!
@@ -94,6 +116,7 @@ export const typeDefs = gql`
     posicoesPorVeiculo(idVeiculo: Int!, dataInicio: DateTime!, dataFim: DateTime!): [Posicao!]!
     syncStatus: [SyncCursor!]!
     requestLog(limit: Int = 100, method: String): [RequestLogEntry!]!
+    refreshTokens(userId: ID!): [RefreshToken!]!
     caixaPretaEventos(placa: String, idVeiculo: Int): [CaixaPretaEvento!]!
       @deprecated(reason: "Método 4.51 da Sascar desativado. Use posicoesRecentes.")
   }
@@ -101,5 +124,9 @@ export const typeDefs = gql`
   type Mutation {
     login(email: String!, password: String!): AuthPayload!
     refresh(refreshToken: String!): AuthPayload!
+    createUser(input: CreateUserInput!): User!
+    updateUser(id: ID!, input: UpdateUserInput!): User!
+    resetUserPassword(id: ID!, newPassword: String!): User!
+    revokeRefreshToken(id: ID!): Boolean!
   }
 `;
