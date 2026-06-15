@@ -3,6 +3,7 @@ import { Box, Text, useInput } from 'ink';
 import { Table } from '../components/Table';
 import { Spinner } from '../components/Spinner';
 import { Field } from '../components/Form';
+import { DetailModal } from '../components/DetailModal';
 import { useApi } from '../hooks/useApi';
 import { useInterval } from '../hooks/useInterval';
 import { Q_POSICOES_RECENTES, Q_POSICOES_POR_VEICULO } from '../api/queries';
@@ -31,6 +32,8 @@ export function PosicoesView(): React.ReactElement {
   const [rows, setRows] = useState<PosicaoRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<number>(0);
+  const [detail, setDetail] = useState<PosicaoRow | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -61,9 +64,21 @@ export function PosicoesView(): React.ReactElement {
   useInterval(() => { void load(); }, tab === 'recentes' ? 30_000 : 60_000);
 
   useInput((input, key) => {
+    if (detail) {
+      if (key.escape || input === 'q' || key.return) setDetail(null);
+      return;
+    }
     if (input === 'r') { void load(); return; }
     if (key.tab) {
       setTab((t) => (t === 'recentes' ? 'porVeiculo' : 'recentes'));
+      return;
+    }
+    if (rows.length === 0) return;
+    if (key.upArrow) { setSelected((i) => Math.max(0, i - 1)); return; }
+    if (key.downArrow) { setSelected((i) => Math.min(rows.length - 1, i + 1)); return; }
+    if (key.return) {
+      const r = rows[selected];
+      if (r) setDetail(r);
     }
   });
 
@@ -98,7 +113,8 @@ export function PosicoesView(): React.ReactElement {
         <Text dimColor>nenhuma posição no recorte</Text>
       ) : (
         <Table
-          data={rows.slice(0, 200).map((p) => ({
+          data={rows.slice(0, 200).map((p, i) => ({
+            marker: i === selected ? '▸' : ' ',
             idPacote: String(p.idPacote),
             idVeiculo: String(p.idVeiculo),
             dataPosicao: String(p.dataPosicao).slice(0, 19).replace('T', ' '),
@@ -109,7 +125,8 @@ export function PosicoesView(): React.ReactElement {
           }))}
         />
       )}
-      <Text dimColor>mostrando até 200 linhas (de {rows.length})</Text>
+      <Text dimColor>mostrando até 200 linhas (de {rows.length}) · [Enter] detalhe · [↑/↓] navegar</Text>
+      {detail ? <DetailModal title={`Posição ${detail.idPacote}`} data={detail as unknown as Record<string, unknown>} onClose={() => setDetail(null)} /> : null}
     </Box>
   );
 }

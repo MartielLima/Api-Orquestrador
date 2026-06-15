@@ -3,6 +3,7 @@ import { Box, Text, useInput } from 'ink';
 import { Table } from '../../components/Table';
 import { Spinner } from '../../components/Spinner';
 import { Confirm } from '../../components/Confirm';
+import { DetailModal } from '../../components/DetailModal';
 import { useApi } from '../../hooks/useApi';
 import { useInterval } from '../../hooks/useInterval';
 import { useToast } from '../../hooks/useToast';
@@ -31,6 +32,7 @@ export function UsersView(): React.ReactElement {
   const [confirm, setConfirm] = useState<{ kind: 'toggleActive'; user: UserRow } | null>(null);
   const [tokens, setTokens] = useState<RefreshTokenRow[]>([]);
   const [tokensLoading, setTokensLoading] = useState<boolean>(false);
+  const [detail, setDetail] = useState<UserRow | null>(null);
 
   const loadUsers = useCallback(async (): Promise<void> => {
     try {
@@ -90,6 +92,7 @@ export function UsersView(): React.ReactElement {
     }
     if (key.upArrow) { setSelected((i) => Math.max(0, i - 1)); return; }
     if (key.downArrow) { setSelected((i) => Math.min(users.length - 1, i + 1)); return; }
+    if (key.return && selectedUser) { setDetail(selectedUser); return; }
   });
 
   const sortedUsers = [...users].sort((a, b) => {
@@ -221,6 +224,7 @@ export function UsersView(): React.ReactElement {
           onCancel={() => setConfirm(null)}
         />
       ) : null}
+      {detail ? <DetailModal title={`Usuário — ${detail.email}`} data={detail as unknown as Record<string, unknown>} onClose={() => setDetail(null)} /> : null}
     </Box>
   );
 }

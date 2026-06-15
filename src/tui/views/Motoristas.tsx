@@ -10,5 +10,5 @@ const columns: CadastroColumn[] = [
 ];
 
 export function MotoristasView(): React.ReactElement {
-  return <CadastroList title="Motoristas" query={{ kind: 'motoristas' }} columns={columns} emptyMessage="nenhum motorista" />;
+  return <CadastroList title="Motoristas" query={{ kind: 'motoristas', idField: 'idMotorista' }} columns={columns} emptyMessage="nenhum motorista" />;
 }

@@ -10,5 +10,5 @@ const columns: CadastroColumn[] = [
 ];
 
 export function ClientesView(): React.ReactElement {
-  return <CadastroList title="Clientes" query={{ kind: 'clientes' }} columns={columns} emptyMessage="nenhum cliente" />;
+  return <CadastroList title="Clientes" query={{ kind: 'clientes', idField: 'idCliente' }} columns={columns} emptyMessage="nenhum cliente" />;
 }

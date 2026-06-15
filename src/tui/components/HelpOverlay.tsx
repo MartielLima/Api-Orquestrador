@@ -19,33 +19,43 @@ const GLOBAL: Shortcut[] = [
 const VIEW_SHORTCUTS: Record<string, Shortcut[]> = {
   users: [
     { key: 'n', label: 'novo usuário' },
-    { key: 'e', label: 'editar role' },
+    { key: 'e', label: 'editar role/active' },
     { key: 'a', label: 'ativar/desativar' },
     { key: 'p', label: 'reset senha' },
     { key: 't', label: 'ver tokens' },
     { key: 'r', label: 'refresh' },
+    { key: 'Enter', label: 'detalhe da linha' },
   ],
   clientes: [
     { key: 'f', label: 'filtrar por id' },
+    { key: 'x', label: 'limpar filtro' },
     { key: 'r', label: 'refresh' },
+    { key: 'Enter', label: 'detalhe da linha' },
   ],
   veiculos: [
     { key: 'f', label: 'filtrar por id' },
+    { key: 'x', label: 'limpar filtro' },
     { key: 'r', label: 'refresh' },
+    { key: 'Enter', label: 'detalhe da linha' },
   ],
   motoristas: [
     { key: 'f', label: 'filtrar por id' },
+    { key: 'x', label: 'limpar filtro' },
     { key: 'r', label: 'refresh' },
+    { key: 'Enter', label: 'detalhe da linha' },
   ],
   posicoes: [
     { key: 'Tab', label: 'recentes / por veículo' },
-    { key: 'm', label: 'toggle mapa ASCII' },
+    { key: 'r', label: 'refresh' },
+    { key: 'Enter', label: 'detalhe da linha' },
   ],
   logs: [
-    { key: 'f', label: 'editar filtros' },
-    { key: 's', label: 'follow/unfollow' },
+    { key: 'm', label: 'cyclar método' },
+    { key: 'f', label: 'cyclar status' },
+    { key: 's', label: 'follow on/off' },
     { key: 'r', label: 'refresh' },
     { key: 'x', label: 'limpar filtros' },
+    { key: 'Enter', label: 'detalhe da linha' },
   ],
   sync: [
     { key: 'r', label: 'refresh' },
