@@ -41,3 +41,30 @@ Tokens são obtidos via `mutation login` ou `mutation refresh`.
 
 A diretiva `@deprecated` está aplicada nos campos SDL correspondentes
 para que ferramentas (Apollo Studio, GraphiQL) exibam o aviso automaticamente.
+
+## User Management (admin only)
+
+Todas as queries/mutations abaixo requerem `role: 'admin'`. Não-admin recebe `FORBIDDEN`.
+
+### Queries
+
+- `me: User!` — usuário autenticado (qualquer role)
+- `users: [User!]!` — lista todos os usuários
+- `refreshTokens(userId: ID!): [RefreshToken!]!` — tokens ativos de um usuário
+
+### Mutations
+
+- `createUser(input: CreateUserInput!): User!`
+- `updateUser(id: ID!, input: UpdateUserInput!): User!`
+- `resetUserPassword(id: ID!, newPassword: String!): User!`
+- `revokeRefreshToken(id: ID!): Boolean!`
+
+### Códigos de erro
+
+- `UNAUTHENTICATED` — sem token / token inválido
+- `FORBIDDEN` — autenticado mas sem role `admin`
+- `EMAIL_TAKEN` — email já existe (unique violation)
+- `WEAK_PASSWORD` — senha não atende os requisitos
+- `USER_NOT_FOUND` — id inexistente
+- `CANNOT_DEMOTE_SELF` — admin tentando mudar a própria role para `user`
+- `CANNOT_DEACTIVATE_SELF` — admin tentando desativar a si mesmo

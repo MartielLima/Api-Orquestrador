@@ -2,6 +2,26 @@
 
 Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e este projeto adere a [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [0.2.0] - 2026-06-15
+
+### Added
+
+- TUI Ink-based (`npm run tui`) com gestão de usuários (prioridade), logs de auditoria, navegação de dados Sascar, status de sync, e gestão de refresh tokens.
+- Apollo auth plugin que popula `ctx.user` a partir do header `Authorization: Bearer ...`. (Antes o token era emitido mas não aplicado.)
+- Resolvers de user management (admin-gated): `me`, `users`, `refreshTokens`, `createUser`, `updateUser`, `resetUserPassword`, `revokeRefreshToken`.
+- Guards `requireAuth` / `requireAdmin` reutilizáveis.
+- `UserError` tipado com códigos: `EMAIL_TAKEN`, `WEAK_PASSWORD`, `USER_NOT_FOUND`, `FORBIDDEN`, `UNAUTHENTICATED`, `CANNOT_DEMOTE_SELF`, `CANNOT_DEACTIVATE_SELF`.
+- Type `User.active` e types `RefreshToken` / `CreateUserInput` / `UpdateUserInput` no SDL.
+- Validação zod para todas as mutations de user management.
+
+### Known limitations
+
+- Logout from TUI clears the session locally but does not revoke the refresh token on the server. The token expires naturally after `JWT_REFRESH_TTL` (default 7d) or is revoked by an admin via the TUI Tokens view. A dedicated `logout(refreshToken)` mutation is planned.
+
+### Tests
+
+- 37 → ~78 backend tests (18 userResolvers + 2 authPlugin + 14 validators + 3 errors + 4 guards).
+
 ## [0.1.1] - 2026-06-13
 
 ### Adicionado
