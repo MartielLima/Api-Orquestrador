@@ -13,11 +13,17 @@ export const createUserInputRule = z.object({
   role: roleRule,
 });
 
+export type CreateUserInput = z.infer<typeof createUserInputRule>;
+
 export const updateUserInputRule = z.object({
   role: roleRule.optional(),
   active: z.boolean().optional(),
 });
 
+export type UpdateUserInput = z.infer<typeof updateUserInputRule>;
+
 export const resetPasswordRule = z.object({
   newPassword: z.string().regex(passwordRule, 'senha: 8+ chars, com maiúscula, minúscula e dígito'),
 });
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordRule>;
