@@ -4,7 +4,7 @@ import type { AppContext } from '../context';
 import { mapSascarError } from '../orchestrator/errors';
 
 export interface Posicao {
-  idPacote: number;
+  idPacote: string;
   idVeiculo: number;
   dataPosicao: Date;
   dataPacote: Date;
@@ -105,7 +105,7 @@ export async function fetchAndUpsertPosicoes(ctx: AppContext, idVeiculo: number)
 
 function mapPosicoes(rows: any[]): Posicao[] {
   return rows.map((r) => ({
-    idPacote: Number(r.id_pacote),
+    idPacote: String(r.id_pacote),
     idVeiculo: r.id_veiculo,
     dataPosicao: r.data_posicao,
     dataPacote: r.data_pacote,
