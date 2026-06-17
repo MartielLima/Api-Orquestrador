@@ -92,7 +92,10 @@ export async function fetchAndUpsertPosicoes(ctx: AppContext, idVeiculo: number)
     });
   }
   if (posicoes.length) {
-    const maxId = Math.max(...posicoes.map((p) => Number(p.idPacote)));
+    const maxId = posicoes
+      .map((p) => BigInt(p.idPacote))
+      .reduce((a, b) => (a > b ? a : b), 0n)
+      .toString();
     await ctx.db.execute({
       sql: `INSERT INTO sync_cursor (method, id_veiculo, last_id_pacote, last_synced_at)
             VALUES ($1, $2, $3, now())
