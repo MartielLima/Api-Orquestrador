@@ -3,6 +3,7 @@ import { logRequest } from './log';
 
 export interface CachedQueryOpts<T, TRow> {
   table: string;
+  primaryKey: string;
   ttlMs: number;
   method?: string;
   fetcher: () => Promise<T[]>;
@@ -43,12 +44,16 @@ export async function cachedQuery<T, TRow = any>(
     const cols = Object.keys(row as object);
     const placeholders = cols.map((_, i) => `$${i + 1}`).join(',');
     const colNames = cols.join(',');
+    const updateSet = cols.map((c) => `${c} = EXCLUDED.${c}`).join(', ');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const values = cols.map((c) => (row as any)[c]);
     await db.execute({
       sql: `INSERT INTO ${opts.table} (${colNames}, fetched_at, expires_at)
             VALUES (${placeholders}, now(), $${cols.length + 1})
-            ON CONFLICT DO NOTHING`,
+            ON CONFLICT (${opts.primaryKey}) DO UPDATE SET
+              ${updateSet},
+              fetched_at = now(),
+              expires_at = $${cols.length + 1}`,
       args: [...values, expiresAt],
     });
   }
