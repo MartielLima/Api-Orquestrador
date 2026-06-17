@@ -12,6 +12,10 @@ Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue 
 - **feat(integration)**: New DB migration `0005_veiculos_id_equipamento_bigint.sql` widens `id_equipamento` to `BIGINT` (was `INTEGER`, overflow on real data).
 - **fix(schema)**: `Posicao.idPacote` and `SyncCursor.lastIdPacote` switched to `BigInt` (was `Int`, broke on real Sascar data > 2³¹).
 - **fix(cache)**: `cachedQuery` now uses `ON CONFLICT (primaryKey) DO UPDATE SET ... fetched_at, expires_at` (was `ON CONFLICT DO NOTHING` without a target). Cached rows refresh correctly on each cache miss, so the cache actually works.
+
+### Fixed
+
+- **fix(bigint)**: Resolvers de `posicoesPorVeiculo`, `syncStatus` e `mapPosicoes` agora propagam `id_pacote` / `last_id_pacote` como `string` direto do `pg` (em vez de `Number()`), preservando precisão > 2^53. O schema já declarava `BigInt!` desde `ada026f`; este commit fecha o invariante no lado do resolver. `fetchAndUpsertPosicoes` agora usa `BigInt().reduce()` para o cursor max (future-proofing).
 - **fix(cache)**: `cachedQuery` now calls `mapSascarError` on fetcher errors, so `clientes` / `veiculos` / `motoristas` return `SASCAR_AUTH` / `SASCAR_RATE_LIMIT` / `SASCAR_TIMEOUT` / `SASCAR_NETWORK` / `SASCAR_FAULT` codes (was `INTERNAL_SERVER_ERROR`).
 - **fix(auth)**: `login` and `refresh` mutations now include `active` in the `user` payload (was causing `Cannot return null for non-nullable field User.active` when the query asked for `user { active }`).
 - **fix(server)**: `formatError` plugin in Apollo config unwraps `UserError` and surfaces its `code` as the GraphQL `extensions.code`. Now `UNAUTHENTICATED` / `FORBIDDEN` / `EMAIL_TAKEN` / `WEAK_PASSWORD` / `USER_NOT_FOUND` / `CANNOT_DEMOTE_SELF` / `CANNOT_DEACTIVATE_SELF` come through correctly (were all `INTERNAL_SERVER_ERROR` before).
