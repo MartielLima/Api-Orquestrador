@@ -372,11 +372,18 @@ Use `posicoesRecentes` no lugar.
 
 ## Known Issues (pré-existentes, fora do escopo do pin)
 
-| # | Problema | Local | Impacto |
-| --- | --- | --- | --- |
-| 1 | `login` esquece `active` no objeto `user` retornado → GraphQL rejeita com `Cannot return null for non-nullable field User.active` quando a query pede `user { active }` | `src/auth/resolvers.ts:57` (login) e `:101` (refresh) | login só funciona se a query NÃO pedir `user { active }` |
-| 2 | Erros de auth/credenciais vêm como `INTERNAL_SERVER_ERROR` em vez de `UNAUTHENTICATED` / `FORBIDDEN` | falta `mapAuthError` (ou uso de `UserError`) | clientes não conseguem distinguir 401 vs 500 |
-| 3 | `posicoesRecentes.idPacote` falha em overflow (> 2³¹) | `src/graphql/schema.ts` — campo `Int`, deveria ser `BigInt` (igual `idEquipamento`) + migration `0006_posicoes_id_pacote_bigint.sql` | posicoesRecentes quebra com dados reais |
-| 4 | `cachedQuery` (clientes/veiculos/motoristas) não chama `mapSascarError`; `posicoes.ts` chama. Erros Sascar em cadastros viram `INTERNAL_SERVER_ERROR` | `src/orchestrator/cache.ts` | código `SASCAR_*` não é emitido nessas queries |
-| 5 | `cachedQuery` em `posicoes.ts` (`getPosicoesRecentes`) dispara sync para TODOS os veículos em cache miss, sequencialmente — pode ser lento com muitos veículos | `src/domain/posicoes.ts:42-44` | latência alta em `posicoesRecentes` se há > 50 veículos e banco de posições vazio |
-| 6 | `cachedQuery` em `posicoesRecentes` faz cache via `obterPacotePosicaoPorRangeJSON` — mas o `cachedQuery` salva em `veiculos_cache` (tabela errada); a tabela `posicoes` é populada só por `fetchAndUpsertPosicoes` (que está OK). O `cachedQuery` para posições é na verdade o sync sob demanda. | `src/domain/posicoes.ts:22-57` | sem impacto funcional agora, mas a função é confusa |
+Bugs #1–#4 foram corrigidos no mesmo PR do pin (ver `CHANGELOG.md` → `[Unreleased]`). Restam 2 issues que não bloqueiam, capturadas para follow-up:
+
+| # | Problema | Local | Impacto | Status |
+| --- | --- | --- | --- | --- |
+| 5 | `cachedQuery` em `posicoes.ts` (`getPosicoesRecentes`) dispara sync para TODOS os veículos em cache miss, sequencialmente — pode ser lento com muitos veículos | `src/domain/posicoes.ts:42-44` | latência alta em `posicoesRecentes` se há > 50 veículos e banco de posições vazio | **pending** |
+| 6 | `cachedQuery` em `posicoesRecentes` faz cache via `obterPacotePosicaoPorRangeJSON` — mas o `cachedQuery` salva em `veiculos_cache` (tabela errada); a tabela `posicoes` é populada só por `fetchAndUpsertPosicoes` (que está OK). O `cachedQuery` para posições é na verdade o sync sob demanda. | `src/domain/posicoes.ts:22-57` | sem impacto funcional agora, mas a função é confusa | **pending** |
+
+### Resolvidos neste PR (era pré-existente, agora fixed)
+
+| # | Era | Fix |
+| --- | --- | --- |
+| 1 | `login`/`refresh` não retornavam `active` no `user` | Adicionado `active: u.active` em ambos (commit `74e6d35`) |
+| 2 | Erros de auth vinham como `INTERNAL_SERVER_ERROR` | `UserError` + `formatError` plugin no Apollo (commits `74e6d35` + `b9ac030`) |
+| 3 | `posicoesRecentes.idPacote` overflow em dados reais | `idPacote: BigInt!` no schema (commit `ada026f`) |
+| 4 | `cachedQuery` em cadastros não mapeava erros Sascar | `.catch(mapSascarError)` no fetcher (commit `ee5c01a`) |
