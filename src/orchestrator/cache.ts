@@ -1,5 +1,6 @@
 import type { Db } from '../db/client';
 import { logRequest } from './log';
+import { mapSascarError } from './errors';
 
 export interface CachedQueryOpts<T, TRow> {
   table: string;
@@ -37,7 +38,9 @@ export async function cachedQuery<T, TRow = any>(
     return opts.fromRows(cached);
   }
 
-  const fresh = await opts.fetcher();
+  const fresh = await opts.fetcher().catch((err) => {
+    throw mapSascarError(err);
+  });
   const expiresAt = new Date(Date.now() + opts.ttlMs);
   for (const item of fresh) {
     const row = toRow(item);
