@@ -165,7 +165,7 @@ node-cron  ──►  job syncPositions (a cada 10 min, opt-in)
 
 A imagem (`api-orquestrador:0.1.0`) é multi-stage (Node 22-alpine):
 
-1. **Builder**: clona o `sascar-sdk` do GitHub, builda seu `dist/`, instala deps (com `npm rebuild bcrypt` para o native binding), compila nosso TS.
+1. **Builder**: clona o `sascar-sdk` do GitHub no tag `v1.1.1` (`git clone --branch v1.1.1` via `SASCAR_SDK_REF`), builda seu `dist/`, instala deps (com `npm rebuild bcrypt` para o native binding), compila nosso TS.
 2. **Runtime**: imagem limpa com `node_modules` podado, `dist/` compilado, `src/db/migrations/` para o script de migration rodar, e o `docker-entrypoint.sh` que:
    - Aguarda o Postgres responder
    - Roda migrations (idempotente)
@@ -209,7 +209,7 @@ A diretiva `@deprecated` está aplicada nos campos SDL correspondentes para que 
 
 ## Notas operacionais
 
-- **sascar-sdk** é instalado do GitHub. O `postinstall` builda automaticamente. Se o `postinstall` falhar (ex: sem rede), rode manualmente: `cd node_modules/sascar-sdk && npm run build`.
+- **sascar-sdk** é pined em [`v1.1.1`](https://github.com/MartielLima/sascar-sdk/releases/tag/v1.1.1) (GitHub tag). Builds são reprodutíveis. O `postinstall` continua buildando localmente se o `dist/` vier ausente; em geral vem no tarball. Se o `postinstall` falhar (ex: sem rede), rode manualmente: `cd node_modules/sascar-sdk && npm run build`.
 - **`SEED_ADMIN_EMAIL`** precisa de TLD válido (zod). Use `admin@local.dev`, não `admin@local`.
 - **JWT secrets** em produção: `openssl rand -hex 32` (rode 2x para access e refresh).
 - **Coverage atual**: ~95% dos módulos `src/orchestrator/`, `src/auth/`, `src/domain/`. Adicionar coverage report com `npm run test:cov`.

@@ -2,6 +2,12 @@
 
 Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e este projeto adere a [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [Unreleased]
+
+### Changed
+
+- **build(deps)**: Pinned `sascar-sdk` to `v1.1.1` (was: tracking `main`). Reproducible builds + capture the audited `SascarXmlRpcClient` module and bugfixes from the v1.1.x line. No runtime changes in this project — the XML-RPC client is not consumed yet. See `docs/superpowers/specs/2026-06-17-sascar-sdk-pin-design.md`.
+
 ## [0.2.0] - 2026-06-15
 
 ### Added

@@ -14,7 +14,7 @@ RUN npm ci --include=dev --ignore-scripts
 # Build sascar-sdk from source: clone the repo, install its deps, run tsc,
 # then copy package.json + dist into our node_modules.
 ARG SASCAR_SDK_REPO=https://github.com/MartielLima/sascar-sdk.git
-ARG SASCAR_SDK_REF=main
+ARG SASCAR_SDK_REF=v1.1.1
 RUN apk add --no-cache git python3 make g++ \
  && git clone --depth 1 --branch ${SASCAR_SDK_REF} ${SASCAR_SDK_REPO} /tmp/sascar-sdk \
  && cd /tmp/sascar-sdk \
