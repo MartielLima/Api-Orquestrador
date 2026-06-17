@@ -99,4 +99,14 @@ export const resolvers = {
     __parseValue: (v: unknown) => (typeof v === 'string' ? new Date(v) : null),
     __parseLiteral: () => null,
   },
+  BigInt: {
+    __serialize: (v: unknown) =>
+      typeof v === 'number' || typeof v === 'string' || typeof v === 'bigint'
+        ? String(v)
+        : v,
+    __parseValue: (v: unknown) =>
+      typeof v === 'string' || typeof v === 'number' ? v : null,
+    __parseLiteral: (ast: { kind: string; value: string }) =>
+      ast.kind === 'StringValue' || ast.kind === 'IntValue' ? ast.value : null,
+  },
 };

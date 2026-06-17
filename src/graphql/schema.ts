@@ -2,6 +2,7 @@ import gql from 'graphql-tag';
 
 export const typeDefs = gql`
   scalar DateTime
+  scalar BigInt
 
   type User {
     id: ID!
@@ -39,7 +40,7 @@ export const typeDefs = gql`
     placa: String!
     idCliente: Int
     descricao: String
-    idEquipamento: Int
+    idEquipamento: BigInt
     fetchedAt: DateTime!
     expiresAt: DateTime!
   }
