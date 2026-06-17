@@ -3,6 +3,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from './jwt';
 import { createHash } from 'crypto';
 import type { Db } from '../db/client';
 import type { Logger } from 'pino';
+import { UserError, UserErrorCode } from './errors';
 
 export interface AuthConfig {
   accessSecret: string;
@@ -35,9 +36,13 @@ export function buildAuthResolvers(cfg: AuthConfig) {
           args: [args.email],
         });
         const u = rows[0];
-        if (!u || !u.active) throw new Error('Invalid credentials');
+        if (!u || !u.active) {
+          throw new UserError(UserErrorCode.UNAUTHENTICATED, 'Invalid credentials');
+        }
         const ok = await verifyPassword(args.password, u.password_hash);
-        if (!ok) throw new Error('Invalid credentials');
+        if (!ok) {
+          throw new UserError(UserErrorCode.UNAUTHENTICATED, 'Invalid credentials');
+        }
 
         const accessToken = signAccessToken(
           { sub: u.id, email: u.email, role: u.role },
@@ -54,7 +59,7 @@ export function buildAuthResolvers(cfg: AuthConfig) {
         return {
           accessToken,
           refreshToken,
-          user: { id: u.id, email: u.email, role: u.role, createdAt: new Date() },
+          user: { id: u.id, email: u.email, role: u.role, active: u.active, createdAt: new Date() },
         };
       },
 
@@ -70,14 +75,16 @@ export function buildAuthResolvers(cfg: AuthConfig) {
         });
         const t = rows[0];
         if (!t || t.revoked_at || new Date(t.expires_at) < new Date()) {
-          throw new Error('Invalid refresh token');
+          throw new UserError(UserErrorCode.UNAUTHENTICATED, 'Invalid refresh token');
         }
         const { rows: urows } = await ctx.db.execute({
-          sql: 'SELECT id, email, role FROM users WHERE id = $1 AND active = true',
+          sql: 'SELECT id, email, role, active FROM users WHERE id = $1 AND active = true',
           args: [payload.sub],
         });
         const u = urows[0];
-        if (!u) throw new Error('User not found');
+        if (!u) {
+          throw new UserError(UserErrorCode.UNAUTHENTICATED, 'User not found');
+        }
 
         await ctx.db.execute({
           sql: 'UPDATE refresh_tokens SET revoked_at = now() WHERE id = $1',
@@ -98,7 +105,7 @@ export function buildAuthResolvers(cfg: AuthConfig) {
         return {
           accessToken,
           refreshToken: newRefresh,
-          user: { id: u.id, email: u.email, role: u.role, createdAt: new Date() },
+          user: { id: u.id, email: u.email, role: u.role, active: u.active, createdAt: new Date() },
         };
       },
     },
