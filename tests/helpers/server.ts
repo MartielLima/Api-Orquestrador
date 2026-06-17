@@ -10,7 +10,7 @@ import { loadConfig } from '../../src/config';
 export async function buildTestServer() {
   const ctx = await buildContext();
   const orchestrator = new SascarOrchestrator(
-    buildSascarClient({ usuario: 'test', senha: 'test', wsdlUrl: 'http://localhost:0' }),
+    buildSascarClient({ usuario: 'test', senha: 'test', wsdlUrl: 'http://localhost:9999' }),
   );
   const ctxWithOrch = { ...ctx, orchestrator };
   const cfg = loadConfig();
