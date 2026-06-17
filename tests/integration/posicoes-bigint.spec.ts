@@ -7,7 +7,7 @@ const SASCAR_URL = 'http://localhost:9999';
 // 9007199254740993 = 2^53 + 1 — o menor inteiro > 2^53, exatamente o limiar onde
 // Number() perde precisão. Number('9007199254740993') === 9007199254740992 (off-by-one),
 // enquanto String() preserva '9007199254740993'. Cabe em Postgres bigint (max 2^63-1 ≈ 9.22e18).
-// Não corresponde a um id_pacote real da Sascar (que hoje é ~9.3e9, < 2^31).
+// Não corresponde a um id_pacote real da Sascar (que hoje é ~9.3e9, < 2^53).
 const BIG_ID_PACOTE = '9007199254740993';
 
 describe('BigInt passthrough em posicoesPorVeiculo e syncStatus', () => {
