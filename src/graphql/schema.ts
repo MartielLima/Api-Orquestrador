@@ -54,7 +54,7 @@ export const typeDefs = gql`
   }
 
   type Posicao {
-    idPacote: Int!
+    idPacote: BigInt!
     idVeiculo: Int!
     dataPosicao: DateTime!
     dataPacote: DateTime!
@@ -70,7 +70,7 @@ export const typeDefs = gql`
   type SyncCursor {
     method: String!
     idVeiculo: Int!
-    lastIdPacote: Int
+    lastIdPacote: BigInt
     lastSyncedAt: DateTime!
   }
 
