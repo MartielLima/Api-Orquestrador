@@ -2,6 +2,7 @@ import gql from 'graphql-tag';
 
 export const typeDefs = gql`
   scalar DateTime
+  scalar BigInt
 
   type User {
     id: ID!
@@ -39,9 +40,57 @@ export const typeDefs = gql`
     placa: String!
     idCliente: Int
     descricao: String
-    idEquipamento: Int
+    idEquipamento: BigInt
     fetchedAt: DateTime!
     expiresAt: DateTime!
+    status: VeiculoStatus
+  }
+
+  type VeiculoStatusLocalizacao {
+    latitude: Float!
+    longitude: Float!
+    velocidade: Float!
+    direcao: Int
+  }
+
+  type VeiculoStatusCombustivel {
+    nivel: String
+    litrometro: String
+  }
+
+  type VeiculoStatusSensores {
+    tensao: Float
+    rpm: Int
+    temperatura1: Float
+    temperatura2: Float
+    temperatura3: Float
+  }
+
+  type VeiculoStatusAlarmeUltimaMensagem {
+    nome: String
+    conteudo: String
+    texto: String
+  }
+
+  type VeiculoStatusAlarme {
+    statusAncora: Int
+    pontoEntrada: Boolean!
+    pontoSaida: Boolean!
+    ultimaMensagem: VeiculoStatusAlarmeUltimaMensagem
+  }
+
+  type VeiculoStatus {
+    bloqueado: Boolean!
+    ignicaoLigada: Boolean!
+    online: Boolean!
+    localizacao: VeiculoStatusLocalizacao!
+    gps: Boolean!
+    jamming: Boolean!
+    combustivel: VeiculoStatusCombustivel
+    sensores: VeiculoStatusSensores!
+    alarme: VeiculoStatusAlarme!
+    atualizadoEm: DateTime!
+    idadeSegundos: Int!
   }
 
   type Motorista {
@@ -53,7 +102,7 @@ export const typeDefs = gql`
   }
 
   type Posicao {
-    idPacote: Int!
+    idPacote: BigInt!
     idVeiculo: Int!
     dataPosicao: DateTime!
     dataPacote: DateTime!
@@ -69,7 +118,7 @@ export const typeDefs = gql`
   type SyncCursor {
     method: String!
     idVeiculo: Int!
-    lastIdPacote: Int
+    lastIdPacote: BigInt
     lastSyncedAt: DateTime!
   }
 

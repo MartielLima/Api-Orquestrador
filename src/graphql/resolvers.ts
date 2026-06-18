@@ -37,7 +37,7 @@ export const resolvers = {
         args: [args.idVeiculo, args.dataInicio, args.dataFim],
       });
       return (rows as any[]).map((r) => ({
-        idPacote: Number(r.id_pacote),
+        idPacote: String(r.id_pacote),
         idVeiculo: r.id_veiculo,
         dataPosicao: r.data_posicao,
         dataPacote: r.data_pacote,
@@ -58,7 +58,7 @@ export const resolvers = {
       return (rows as any[]).map((r) => ({
         method: r.method,
         idVeiculo: r.id_veiculo,
-        lastIdPacote: r.last_id_pacote ? Number(r.last_id_pacote) : null,
+        lastIdPacote: r.last_id_pacote ? String(r.last_id_pacote) : null,
         lastSyncedAt: r.last_synced_at,
       }));
     },
@@ -98,5 +98,15 @@ export const resolvers = {
     __serialize: (v: unknown) => (v instanceof Date ? v.toISOString() : v),
     __parseValue: (v: unknown) => (typeof v === 'string' ? new Date(v) : null),
     __parseLiteral: () => null,
+  },
+  BigInt: {
+    __serialize: (v: unknown) =>
+      typeof v === 'number' || typeof v === 'string' || typeof v === 'bigint'
+        ? String(v)
+        : v,
+    __parseValue: (v: unknown) =>
+      typeof v === 'string' || typeof v === 'number' ? v : null,
+    __parseLiteral: (ast: { kind: string; value: string }) =>
+      ast.kind === 'StringValue' || ast.kind === 'IntValue' ? ast.value : null,
   },
 };

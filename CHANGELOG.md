@@ -4,9 +4,34 @@ Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue 
 
 ## [Unreleased]
 
-### Changed
+### Added
 
-- **build(deps)**: Pinned `sascar-sdk` to `v1.1.1` (was: tracking `main`). Reproducible builds + capture the audited `SascarXmlRpcClient` module and bugfixes from the v1.1.x line. No runtime changes in this project — the XML-RPC client is not consumed yet. See `docs/superpowers/specs/2026-06-17-sascar-sdk-pin-design.md`.
+- **build(deps)**: Pinned `sascar-sdk` to `v1.1.1` (was: tracking `main`). Reproducible builds + capture the audited `SascarXmlRpcClient` module + bugfixes from the v1.1.x line. No runtime changes — the XML-RPC client is not consumed yet.
+- **feat(integration)**: docker-compose `dns` now lists `8.8.8.8` / `1.1.1.1` alongside the embedded resolver, so the app container can reach external hosts in environments where `127.0.0.11` doesn't forward.
+- **feat(integration)**: New `BigInt` GraphQL scalar; `Veiculo.idEquipamento` switched to it (serialized as string, preserves precision past 2³¹ — Sascar returns values like 9.3B).
+- **feat(integration)**: New DB migration `0005_veiculos_id_equipamento_bigint.sql` widens `id_equipamento` to `BIGINT` (was `INTEGER`, overflow on real data).
+- **feat(graphql)**: New `VeiculoStatus` type and `Veiculo.status` field — live state (bloqueio, ignição, localização, GPS, jamming, combustível, sensores, alarme) derived from the most recent `posicoes` packet per vehicle. Resolver enriches `Query.veiculos` with a single batched `DISTINCT ON` query (no N+1, no Sascar passthrough). Freshness inherits from the existing `syncPositions` cron (default 10min) — `status.online` is a 10min heuristic via `data_posicao > now() - interval`. `status: null` when the vehicle has no position yet. TUI gains a `status` column with ASCII badges (`[B]` bloqueado, `[I]` ignição, `[+]` online).
+- **fix(schema)**: `Posicao.idPacote` and `SyncCursor.lastIdPacote` switched to `BigInt` (was `Int`, broke on real Sascar data > 2³¹).
+- **fix(cache)**: `cachedQuery` now uses `ON CONFLICT (primaryKey) DO UPDATE SET ... fetched_at, expires_at` (was `ON CONFLICT DO NOTHING` without a target). Cached rows refresh correctly on each cache miss, so the cache actually works.
+
+### Fixed
+
+- **fix(bigint)**: Resolvers de `posicoesPorVeiculo`, `syncStatus` e `mapPosicoes` agora propagam `id_pacote` / `last_id_pacote` como `string` direto do `pg` (em vez de `Number()`), preservando precisão > 2^53. O schema já declarava `BigInt!` desde `ada026f`; este commit fecha o invariante no lado do resolver. `fetchAndUpsertPosicoes` agora usa `BigInt().reduce()` para o cursor max (future-proofing).
+- **fix(cache)**: `cachedQuery` cache miss agora re-querya a tabela após o upsert e passa as rows ao `fromRows`, garantindo que `fetchedAt`/`expiresAt` sejam populados no retorno (eram `undefined` na resposta GraphQL, violando `DateTime!` — p.ex. `Cliente.fetchedAt: null`). Triggers no primeiro call após container start ou cache expiry.
+- **fix(jwt)**: `signRefreshToken` agora inclui `jti` (`crypto.randomUUID()`) no payload, evitando colisão de hash em chamadas de `refresh` no mesmo segundo (era `duplicate key value violates unique constraint "refresh_tokens_token_hash_key"`).
+- **fix(cache)**: `cachedQuery` now calls `mapSascarError` on fetcher errors, so `clientes` / `veiculos` / `motoristas` return `SASCAR_AUTH` / `SASCAR_RATE_LIMIT` / `SASCAR_TIMEOUT` / `SASCAR_NETWORK` / `SASCAR_FAULT` codes (was `INTERNAL_SERVER_ERROR`).
+- **fix(auth)**: `login` and `refresh` mutations now include `active` in the `user` payload (was causing `Cannot return null for non-nullable field User.active` when the query asked for `user { active }`).
+- **fix(server)**: `formatError` plugin in Apollo config unwraps `UserError` and surfaces its `code` as the GraphQL `extensions.code`. Now `UNAUTHENTICATED` / `FORBIDDEN` / `EMAIL_TAKEN` / `WEAK_PASSWORD` / `USER_NOT_FOUND` / `CANNOT_DEMOTE_SELF` / `CANNOT_DEACTIVATE_SELF` come through correctly (were all `INTERNAL_SERVER_ERROR` before).
+- **docs(api)**: Per-method GraphQL reference (description · arguments · return type structure · errors · example) for all 18 methods. Plus a target error-code table and a Known Issues list.
+- **docs(readme)**: New `API GraphQL` section in the README — scannable map + 4 tables (queries, mutations, types, scalars) that link to `docs/api.md` for the full reference.
+
+### Notes
+
+- PR https://github.com/MartielLima/Api-Orquestrador/pull/1 bundles 11 commits (pin + integration + cache + 4 bug fixes + docs).
+- 52 test suites / 172 tests passing (was 40 / 78 before this session). +37 new tests for the `VeiculoStatus` feature: 20 unit (mapper), 6 integration (batch SQL helper), 2 integration (GraphQL `Query.veiculos { status }`), 9 unit (TUI status cell renderer).
+- Two pre-existing issues remain documented in `docs/api.md` → Known Issues (5: `getPosicoesRecentes` does sequential sync per vehicle; 6: `cachedQuery` in `posicoes.ts` is structurally confusing). Neither is a blocker — captured as follow-up.
+
+
 
 ## [0.2.0] - 2026-06-15
 

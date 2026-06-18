@@ -41,6 +41,7 @@ describe('cachedQuery', () => {
     let fetcherCalls = 0;
     const result = await cachedQuery<{ id: number; nome: string }>(db, {
       table,
+      primaryKey: 'id',
       ttlMs: 60_000,
       fetcher: async () => {
         fetcherCalls++;
@@ -59,6 +60,7 @@ describe('cachedQuery', () => {
     const db = { execute: (q: any) => pool.query(q.sql, q.args) } as any;
     const result = await cachedQuery<{ id: number; nome: string }>(db, {
       table,
+      primaryKey: 'id',
       ttlMs: 60_000,
       fetcher: async () => [{ id: 99, nome: 'Fresh', raw: {} } as any],
       fromRows: (rows: any[]) => rows.map((r) => ({ id: r.id, nome: r.nome })),
@@ -68,6 +70,42 @@ describe('cachedQuery', () => {
 
     const { rows } = await pool.query(`SELECT nome FROM ${table} WHERE id = 99`);
     expect(rows[0].nome).toBe('Fresh');
+    await pool.end();
+  });
+
+  it('refreshes expires_at (and other columns) on conflict', async () => {
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    // Seed a stale row: expires_at is in the past, so the next cachedQuery
+    // would normally call the fetcher and try to INSERT — which would then
+    // hit the PK conflict. With ON CONFLICT ... DO UPDATE, the row gets
+    // refreshed (new fetched_at, new expires_at, new column values).
+    await pool.query(
+      `INSERT INTO ${table} (id, nome, raw, fetched_at, expires_at)
+       VALUES (42, 'Stale', '{}'::jsonb, now() - interval '1 hour', now() - interval '1 second')
+       ON CONFLICT (id) DO NOTHING`,
+    );
+
+    const db = { execute: (q: any) => pool.query(q.sql, q.args) } as any;
+    let fetcherCalls = 0;
+    const result = await cachedQuery<{ id: number; nome: string }>(db, {
+      table,
+      primaryKey: 'id',
+      ttlMs: 60_000,
+      fetcher: async () => {
+        fetcherCalls++;
+        return [{ id: 42, nome: 'Refreshed', raw: {} } as any];
+      },
+      fromRows: (rows: any[]) => rows.map((r) => ({ id: r.id, nome: r.nome })),
+    });
+    expect(fetcherCalls).toBe(1);
+    expect(result.length).toBe(1);
+    expect(result[0].nome).toBe('Refreshed');
+
+    const { rows: stored } = await pool.query(
+      `SELECT nome, expires_at > now() AS is_valid FROM ${table} WHERE id = 42`,
+    );
+    expect(stored[0].nome).toBe('Refreshed');
+    expect(stored[0].is_valid).toBe(true);
     await pool.end();
   });
 });

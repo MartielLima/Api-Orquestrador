@@ -4,7 +4,7 @@ import type { AppContext } from '../context';
 import { mapSascarError } from '../orchestrator/errors';
 
 export interface Posicao {
-  idPacote: number;
+  idPacote: string;
   idVeiculo: number;
   dataPosicao: Date;
   dataPacote: Date;
@@ -92,7 +92,10 @@ export async function fetchAndUpsertPosicoes(ctx: AppContext, idVeiculo: number)
     });
   }
   if (posicoes.length) {
-    const maxId = Math.max(...posicoes.map((p) => Number(p.idPacote)));
+    const maxId = posicoes
+      .map((p) => BigInt(p.idPacote))
+      .reduce((a, b) => (a > b ? a : b), 0n)
+      .toString();
     await ctx.db.execute({
       sql: `INSERT INTO sync_cursor (method, id_veiculo, last_id_pacote, last_synced_at)
             VALUES ($1, $2, $3, now())
@@ -105,7 +108,7 @@ export async function fetchAndUpsertPosicoes(ctx: AppContext, idVeiculo: number)
 
 function mapPosicoes(rows: any[]): Posicao[] {
   return rows.map((r) => ({
-    idPacote: Number(r.id_pacote),
+    idPacote: String(r.id_pacote),
     idVeiculo: r.id_veiculo,
     dataPosicao: r.data_posicao,
     dataPacote: r.data_pacote,

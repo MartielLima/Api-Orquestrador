@@ -105,6 +105,81 @@ docker compose exec postgres psql -U api_orquestrador -d api_orquestrador
 docker images api-orquestrador:0.1.0
 ```
 
+## API GraphQL
+
+**Endpoint:** `POST http://localhost:4000/` (ou `http://app:4000/` rodando dentro do `docker-compose`).
+**Header obrigatório** (exceto `health` e `login`/`refresh`): `Authorization: Bearer <accessToken>`.
+**Tokens:** obtidos via `mutation login` (TTL 15min) ou `mutation refresh` (rotação, TTL 7d).
+
+Documentação completa (exemplos, códigos de erro, notas por método): [`docs/api.md`](docs/api.md).
+
+### Queries
+
+| Query | Auth | Retorna | O que faz |
+| --- | --- | --- | --- |
+| `health` | — | `String!` | Liveness probe (sem auth). Retorna `"ok"`. |
+| `me` | sim | `User!` | Usuário autenticado (a partir do JWT). |
+| `users` | admin | `[User!]!` | Lista todos os usuários. |
+| `clientes(idCliente, quantidade=1000)` | sim | `[Cliente!]!` | Cadastro de clientes. Cache 24h. |
+| `veiculos(idVeiculo, quantidade=1000)` | sim | `[Veiculo!]!` | Cadastro de veículos. Cache 24h. Cada item traz `status` vivo (último pacote `posicoes`). |
+| `motoristas(idMotorista, quantidade=1000)` | sim | `[Motorista!]!` | Cadastro de motoristas. Cache 24h. |
+| `posicoesRecentes(quantidade=1000)` | sim | `[Posicao!]!` | Posições recentes (últimos 5min) do banco local. |
+| `posicoesPorVeiculo(idVeiculo!, dataInicio!, dataFim!)` | sim | `[Posicao!]!` | Posições de um veículo em intervalo (sincroniza antes). |
+| `syncStatus` | sim | `[SyncCursor!]!` | Estado do cursor de sync por veículo/método. |
+| `requestLog(limit=100, method)` | sim | `[RequestLogEntry!]!` | Auditoria: cada chamada (Sascar/auth/cron) gravada. `method` filtra. |
+| `refreshTokens(userId!)` | admin | `[RefreshToken!]!` | Refresh tokens ativos (não revogados, não expirados) de um usuário. |
+| `caixaPretaEventos(placa, idVeiculo)` | sim | `[CaixaPretaEvento!]!` | `@deprecated` — método Sascar 4.51 desativado. Use `posicoesRecentes`. |
+
+### Mutations
+
+| Mutation | Auth | Retorna | O que faz |
+| --- | --- | --- | --- |
+| `login(email!, password!)` | — | `AuthPayload!` | Autentica. Retorna `accessToken` (15min) + `refreshToken` (7d) + `user`. |
+| `refresh(refreshToken!)` | — | `AuthPayload!` | Roda o refresh token; emite novo par (revoga o anterior). |
+| `createUser(input!)` | admin | `User!` | Cria usuário. Erros: `EMAIL_TAKEN`, `WEAK_PASSWORD`. |
+| `updateUser(id!, input!)` | admin | `User!` | Atualiza `role` e/ou `active`. Erros: `CANNOT_DEMOTE_SELF`, `CANNOT_DEACTIVATE_SELF`. |
+| `resetUserPassword(id!, newPassword!)` | admin | `User!` | Reseta a senha (gera hash bcrypt). |
+| `revokeRefreshToken(id!)` | admin | `Boolean!` | Revoga um refresh token. |
+
+### Types (campos retornados)
+
+| Type | Campos |
+| --- | --- |
+| `User` | `id: ID!`, `email: String!`, `role: String!`, `active: Boolean!`, `createdAt: DateTime!` |
+| `AuthPayload` | `accessToken: String!`, `refreshToken: String!`, `user: User!` |
+| `RefreshToken` | `id: ID!`, `userId: ID!`, `createdAt: DateTime!`, `expiresAt: DateTime!`, `revokedAt: DateTime` |
+| `Cliente` | `idCliente: Int!`, `cnpj: String`, `cpf: String`, `nome: String!`, `fetchedAt: DateTime!`, `expiresAt: DateTime!` |
+| `Veiculo` | `idVeiculo: Int!`, `placa: String!`, `idCliente: Int`, `descricao: String`, `idEquipamento: BigInt`, `fetchedAt: DateTime!`, `expiresAt: DateTime!`, `status: VeiculoStatus` (null se sem posição) |
+| `VeiculoStatus` | `bloqueado: Boolean!`, `ignicaoLigada: Boolean!`, `online: Boolean!`, `localizacao: VeiculoStatusLocalizacao!`, `gps: Boolean!`, `jamming: Boolean!`, `combustivel: VeiculoStatusCombustivel`, `sensores: VeiculoStatusSensores!`, `alarme: VeiculoStatusAlarme!`, `atualizadoEm: DateTime!`, `idadeSegundos: Int!` (ver `docs/api.md` para sub-types) |
+| `Motorista` | `idMotorista: Int!`, `nome: String!`, `tipoDocumento: String`, `fetchedAt: DateTime!`, `expiresAt: DateTime!` |
+| `Posicao` | `idPacote: Int!`, `idVeiculo: Int!`, `dataPosicao: DateTime!`, `dataPacote: DateTime!`, `latitude: Float!`, `longitude: Float!`, `velocidade: Float!`, `ignicao: Int`, `direcao: Int`, `odometro: Float`, `syncedVia: String!` |
+| `SyncCursor` | `method: String!`, `idVeiculo: Int!`, `lastIdPacote: Int`, `lastSyncedAt: DateTime!` |
+| `RequestLogEntry` | `id: ID!`, `method: String!`, `source: String!`, `status: String!`, `cacheHit: Boolean!`, `latencyMs: Int`, `createdAt: DateTime!`, `error: String` |
+| `CaixaPretaEvento` | `id: ID!` (deprecated), `idVeiculo: Int`, `placa: String`, `dataEvento: DateTime`, `latitude: Float`, `longitude: Float`, `velocidade: Float` |
+| `CreateUserInput` | `email: String!`, `password: String!`, `role: String!` |
+| `UpdateUserInput` | `role: String`, `active: Boolean` |
+
+### Scalars customizados
+
+- `DateTime` — string ISO 8601 (ex: `2026-06-17T19:25:06.000Z`).
+- `BigInt` — string (preserva precisão para valores que excedem 2³¹, ex: `idEquipamento`).
+
+### Exemplo rápido
+
+```bash
+# 1. Login
+curl -sS -X POST http://localhost:4000/ \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"mutation { login(email:\"admin@local.dev\", password:\"change-me-admin\") { accessToken user { email role } } }"}'
+
+# 2. Usar o token
+TOKEN="<accessToken da resposta>"
+curl -sS -X POST http://localhost:4000/ \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"query":"{ veiculos(quantidade: 3) { idVeiculo placa idEquipamento } }"}'
+```
+
 ## Variáveis de ambiente
 
 | Variável                  | Default                                | Descrição                    |

@@ -16,6 +16,7 @@ export async function getMotoristas(
 ): Promise<Motorista[]> {
   return cachedQuery<any, any>(ctx.db, {
     table: 'motoristas_cache',
+    primaryKey: 'id_motorista',
     ttlMs: 60_000,
     method: 'obterMotoristas',
     fetcher: () =>

@@ -17,6 +17,7 @@ export async function getClientes(
 ): Promise<Cliente[]> {
   return cachedQuery<any, any>(ctx.db, {
     table: 'clientes_cache',
+    primaryKey: 'id_cliente',
     ttlMs: 60_000,
     method: 'obterClientesV2',
     fetcher: () =>
