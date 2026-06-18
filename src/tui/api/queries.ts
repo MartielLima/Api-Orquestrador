@@ -161,6 +161,11 @@ export const Q_VEICULOS = gql`
       idEquipamento
       fetchedAt
       expiresAt
+      status {
+        bloqueado
+        ignicaoLigada
+        online
+      }
     }
   }
 `;
