@@ -16,6 +16,9 @@ Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue 
 - **test(integration)**: New `tests/integration/sascar-real.spec.ts` — suite gated por `RUN_REAL_SASCAR_TESTS=1` que bate no Sascar real (não mocka) e valida end-to-end os 4 métodos principais: `obterClientesV2`, `obterVeiculos`, `obterMotoristas`, `obterPacotePosicaoPorRangeJSON`. Por padrão a suite é `describe.skip` — roda só quando explicitamente habilitada (smoke job, debug local, validação de release). Lazy imports evitam falha no module-init quando env vars não estão setadas. Cobertura de ~5-10min.
 - **feat(scripts)**: New `scripts/benchmark-sascar.ts` — script CLI para benchmark de chamadas Sascar reais em 3 grupos (blackbox desde início da semana, CAN bus, posições do mês passado). Configurável via `BENCHMARK_VEHICLE_LIMIT` (default 5), `BENCHMARK_DAYS_BACK` (default 7), `BENCHMARK_MONTH_DAYS_BACK` (default 35). Imprime tabela no terminal e salva relatório em `reports/benchmark-sascar-*.txt`. Use `npm run benchmark:sascar`. **Nota:** `solicitarEventosCaixaPreta` está desativado pela Sascar ("Metodo desativado. Sem previsao de liberacao") — blackbox vai retornar erro. `obterDadosAdicionais` requer veículo associado a gerenciadora com nota cadastrada.
 - **test(integration)**: New `tests/integration/sascar-benchmark.spec.ts` — smoke test gated por `RUN_BENCHMARK_SMOKE=1` que valida 1 veículo × 1 chamada para cada um dos 3 grupos. Por padrão skipped.
+- **feat(domain)**: New `posicao_eventos` table (migration 0006) — telemetria histórica 1:N com `posicoes`. Persiste snapshot (8 sinais: ignicao, bloqueio, rpm, tensao, velocidade, jamming, combustivel_nivel, combustivel_litrometro) + 1 row por transição (ignicao/bloqueio/jamming) vs posição anterior. Indexado por `(id_veiculo, data_posicao DESC)`. Volume estimado: ~117k rows/dia para 100 veículos. **Nota:** blackbox (caixa preta) e força G não estão disponíveis no Sascar SOAP — fora de escopo desta feature.
+- **test(unit)**: New `tests/unit/extractEventsFromPosicao.spec.ts` — 13 cases para a função pura que extrai eventos de uma posição.
+- **test(integration)**: New `tests/integration/posicao-eventos.spec.ts` — 4 cases cobrindo schema, transition metadata, unique constraint, e query com index.
 
 ### Fixed
 
@@ -31,7 +34,7 @@ Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue 
 ### Notes
 
 - PR https://github.com/MartielLima/Api-Orquestrador/pull/1 bundles 11 commits (pin + integration + cache + 4 bug fixes + docs).
-- 52 test suites / 172 tests passing (was 40 / 78 before this session). +37 new tests for the `VeiculoStatus` feature: 20 unit (mapper), 6 integration (batch SQL helper), 2 integration (GraphQL `Query.veiculos { status }`), 9 unit (TUI status cell renderer).
+- 54 test suites / 189 tests passing (was 52 / 172 before this session). +17 new tests for the posicao_eventos feature: 13 unit (mapper), 4 integration (schema, transition, dedup, query).
 - Two pre-existing issues remain documented in `docs/api.md` → Known Issues (5: `getPosicoesRecentes` does sequential sync per vehicle; 6: `cachedQuery` in `posicoes.ts` is structurally confusing). Neither is a blocker — captured as follow-up.
 
 

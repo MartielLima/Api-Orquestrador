@@ -242,6 +242,27 @@ Para benchmark de chamadas Sascar em escala, use `npm run benchmark:sascar`. O s
 - `solicitarEventosCaixaPreta` está desativado pela Sascar — o grupo 1 vai retornar erros até a Sascar reativar o método.
 - `obterDadosAdicionais` requer veículo com gerenciadora e nota cadastrada — pode falhar com "veiculo nao pertence a gerenciadora".
 
+## Telemetria histórica (`posicao_eventos`)
+
+A tabela `posicao_eventos` (criada pela migration 0006) persiste telemetria histórica por posição: 8 sinais (snapshot) + 1 row por transição (ignicao/bloqueio/jamming) detectada vs posição anterior do mesmo veículo. Populada automaticamente pelo `fetchAndUpsertPosicoes` quando há novas posições.
+
+**Sinais persistidos (snapshot, 8/posição):** `ignicao`, `bloqueio`, `rpm`, `tensao`, `velocidade`, `jamming`, `combustivel_nivel`, `combustivel_litrometro`.
+
+**Sinais de transição (quando mudam vs anterior):** `ignicao`, `bloqueio`, `jamming` — `from_value` e `to_value` no `metadata` JSONB.
+
+**Volume:** ~117k rows/dia para 100 veículos (cron 10min × 8 sinais/posição).
+
+**Query direta via SQL:**
+
+```sql
+SELECT signal, value_numeric, value_text, value_bool, data_posicao
+FROM posicao_eventos
+WHERE id_veiculo = 123 AND data_posicao > now() - interval '24 hours'
+ORDER BY data_posicao DESC;
+```
+
+**Não exposto via GraphQL nesta v1** — query direto via SQL.
+
 ## Arquitetura
 
 ```
