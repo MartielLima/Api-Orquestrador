@@ -55,17 +55,19 @@ Se tudo falhar, tela de erro amigável indica o que configurar. `TUI_API_URL` op
 | `SEED_ADMIN_EMAIL` | (vazio) | Email do admin (mesma var da API) — usado no login silencioso (passo 3 da resolução automática) |
 | `SEED_ADMIN_PASSWORD` | (vazio) | Senha do admin (mesma var da API) — usado no login silencioso |
 
-**Exemplo de uso a partir do host** (assumindo API rodando via `docker compose up -d app`):
+A TUI **carrega `.env` automaticamente** do diretório atual (cwd) na inicialização, via `import 'dotenv/config'` em `src/tui/api/bootstrap.ts`. Variáveis já presentes no `process.env` têm precedência (dotenv não sobrescreve). Isso permite que o mesmo `.env` usado pelo `docker-compose` seja aproveitado pela TUI no host, sem `export` manual. `.env` é gitignored — nada vaza.
+
+**Exemplo de uso a partir do host** (assumindo API rodando via `docker compose up -d app` e `.env` com `SEED_ADMIN_*` definidos):
 
 ```bash
-# Opção 1: login silencioso (usa os defaults do docker-compose.yml: admin@local.dev / change-me-admin)
-SEED_ADMIN_EMAIL=admin@local.dev SEED_ADMIN_PASSWORD=change-me-admin npm run tui
+# Zero-config: lê TUI_API_URL/SEED_ADMIN_*/TUI_API_TOKEN do .env automaticamente
+npm run tui
 
-# Opção 2: token fixo (CI/CD, sessões longas)
+# Sobrescreve pontualmente sem editar o .env
+TUI_API_URL=http://api.exemplo.com/graphql npm run tui
+
+# Token fixo (CI/CD) — vai pelo passo 1 da resolução automática
 TUI_API_TOKEN=eyJhbGc... npm run tui
-
-# Opção 3: API em outro host
-TUI_API_URL=http://api.exemplo.com/graphql SEED_ADMIN_EMAIL=... SEED_ADMIN_PASSWORD=... npm run tui
 ```
 
 A primeira execução persiste o token em `env-paths('api-orquestrador').config/session.json`; execuções seguintes reutilizam até `refresh` automático perto da expiração.
