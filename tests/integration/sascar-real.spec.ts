@@ -122,5 +122,5 @@ describeIfReady('Sascar integration real (gated by RUN_REAL_SASCAR_TESTS=1)', ()
     expect(v.status).toHaveProperty('bloqueado');
     expect(v.status).toHaveProperty('ignicaoLigada');
     expect(v.status).toHaveProperty('online');
-  });
+  }, 90_000);
 });
