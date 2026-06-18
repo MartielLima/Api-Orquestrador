@@ -215,6 +215,18 @@ curl -sS -X POST http://localhost:4000/ \
 - `npm run typecheck` / `npm run lint` / `npm run format:check`
 - `npm run db:migrate` / `npm run db:seed` / `npm run db:reset`
 
+## Testes com Sascar real (gated)
+
+O projeto inclui `tests/integration/sascar-real.spec.ts` que bate no Sascar real (sem mock) e valida end-to-end o pipeline: SDK SOAP → `SascarOrchestrator` → Postgres → GraphQL. Por padrão a suite é `describe.skip`. Para rodar:
+
+```bash
+RUN_REAL_SASCAR_TESTS=1 SASCAR_USUARIO=... SASCAR_SENHA=... SASCAR_WSDL_URL=... npm test
+```
+
+Requer credenciais Sascar válidas (no `.env` ou inline) e o container postgres rodando. Demora ~5-10min. Os 3 testes de cache (~1-3s cada) e 1 teste de posições (~30-45s por SOAP + até 1000 INSERTs) são cobertos.
+
+Use para debug local, validação de release, ou smoke job. **Não rodar em CI sem secret management.**
+
 ## Arquitetura
 
 ```
