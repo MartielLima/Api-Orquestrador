@@ -45,6 +45,8 @@ Se tudo falhar, tela de erro amigável indica o que configurar. `TUI_API_URL` op
 
 A status bar inferior mostra user, role, saúde da API, countdown do token, e relógio. Toasts verdes/vermelhos confirmam ações.
 
+> **Referência completa:** ver [`docs/tui.md`](docs/tui.md) para detalhes de cada view, layout, atalhos específicos, e limitações.
+
 ### Opção 1: Docker Compose (recomendado, zero setup local)
 
 ```bash
@@ -316,6 +318,7 @@ A imagem (`api-orquestrador:0.1.0`) é multi-stage (Node 22-alpine):
 - **Plano de implementação (v1)**: `docs/superpowers/plans/2026-06-12-api-orquestrador-sascar.md`
 - **Plano de implementação (TUI)**: `docs/superpowers/plans/2026-06-15-tui-orquestrador.md`
 - **API GraphQL**: `docs/api.md` (inclui seção de user management admin-gated)
+- **TUI (Terminal User Interface)**: `docs/tui.md` (7 views, atalhos, setup, limitações)
 - **Changelog**: `CHANGELOG.md`
 
 ## Métodos descontinuados (Sascar SasIntegra v2.07)

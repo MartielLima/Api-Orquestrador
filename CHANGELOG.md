@@ -7,6 +7,7 @@ Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue 
 ### Added
 
 - **build(deps)**: Pinned `sascar-sdk` to `v1.1.1` (was: tracking `main`). Reproducible builds + capture the audited `SascarXmlRpcClient` module + bugfixes from the v1.1.x line. No runtime changes — the XML-RPC client is not consumed yet.
+- **docs(tui)**: New `docs/tui.md` — documentação completa da TUI (7 views, layout, atalhos, setup, limitações conhecidas).
 - **feat(integration)**: docker-compose `dns` now lists `8.8.8.8` / `1.1.1.1` alongside the embedded resolver, so the app container can reach external hosts in environments where `127.0.0.11` doesn't forward.
 - **feat(integration)**: New `BigInt` GraphQL scalar; `Veiculo.idEquipamento` switched to it (serialized as string, preserves precision past 2³¹ — Sascar returns values like 9.3B).
 - **feat(integration)**: New DB migration `0005_veiculos_id_equipamento_bigint.sql` widens `id_equipamento` to `BIGINT` (was `INTEGER`, overflow on real data).

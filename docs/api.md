@@ -202,9 +202,11 @@ Revoga um refresh token (seta `revoked_at = now()`). Idempotente: revogar um tok
 
 ---
 
-## Cadastros Sascar (cache 24h)
+## Cadastros Sascar (cache local)
 
-Todas as queries de cadastro são cache-first (`cachedQuery` em `src/domain/`). TTL padrão `CACHE_CADASTRO_TTL_MS` (24h). Em cache miss, faz a chamada SOAP ao Sascar, persiste no Postgres, e devolve. A próxima chamada dentro do TTL vem do cache.
+Todas as queries de cadastro são cache-first (`cachedQuery` em `src/domain/`). TTL efetivo **60 segundos** (hardcoded em `src/domain/{clientes,veiculos,motoristas}.ts:ttlMs: 60_000`). Em cache miss, faz a chamada SOAP ao Sascar, persiste no Postgres, e devolve. A próxima chamada dentro do TTL vem do cache.
+
+> **Nota:** a env var `CACHE_CADASTRO_TTL_MS` (default `86_400_000` = 24h) está documentada no README mas **não é usada** pelo código atual — o `ttlMs` está hardcoded. Para mudar o TTL, edite o código ou faça o `cachedQuery` aceitar env var (follow-up).
 
 ### `clientes(quantidade: Int = 1000, idCliente: Int): [Cliente!]!`
 
@@ -285,7 +287,7 @@ Posições recentes do banco local. Filtro SQL: `data_posicao > now() - interval
 **Argumentos:** `quantidade: Int` — limite (default 1000).
 
 **Retorna (`Posicao`):**
-- `idPacote: Int!` — PK do pacote na Sascar. ⚠️ Sascar retorna valores > 2³¹; este campo está atualmente como `Int` no schema e falha em overflow (ver Known Issues).
+- `idPacote: BigInt!` — PK do pacote na Sascar (serializado como string no JSON para preservar precisão > 2³¹; ex: `"9322440283"`).
 - `idVeiculo: Int!`
 - `dataPosicao: DateTime!` — quando o veículo estava na posição.
 - `dataPacote: DateTime!` — quando a Sascar recebeu o pacote.
