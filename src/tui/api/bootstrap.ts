@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { buildApiClient, type ApiClient } from './client';
 import {
   loadSession,
