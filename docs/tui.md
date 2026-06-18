@@ -13,6 +13,24 @@ npm run tui
 
 ## Setup
 
+### Como rodar
+
+Há duas formas, equivalentes em funcionalidade. Use a do host no dia-a-dia (mais rápido); use a do container quando estiver conectado direto nele.
+
+**A. Pelo host (com a API rodando em `http://localhost:4000/graphql`)**
+
+```bash
+npm run tui
+```
+
+O script faz `npm run build:tui && node dist-tui/index.js`. A primeira vez demora alguns segundos (build); nas seguintes é instantâneo. Funciona mesmo com a API rodando via `docker compose up -d app`.
+
+**B. Dentro do container** (assume que a imagem `api-orquestrador:0.1.0` já tem o build da TUI — ver [Build e deploy](#build-e-deploy))
+
+```bash
+docker exec -it api-orquestrador-app node dist-tui/index.js
+```
+
 ### Pré-requisitos
 
 - API rodando (Docker Compose ou `npm run dev`).
@@ -34,6 +52,23 @@ Se tudo falhar, tela de erro amigável indica o que configurar. `TUI_API_URL` op
 | --- | --- | --- |
 | `TUI_API_URL` | `http://localhost:4000/graphql` | URL do endpoint GraphQL |
 | `TUI_API_TOKEN` | (vazio) | Token JWT pronto para uso; pula toda a lógica de login |
+| `SEED_ADMIN_EMAIL` | (vazio) | Email do admin (mesma var da API) — usado no login silencioso (passo 3 da resolução automática) |
+| `SEED_ADMIN_PASSWORD` | (vazio) | Senha do admin (mesma var da API) — usado no login silencioso |
+
+**Exemplo de uso a partir do host** (assumindo API rodando via `docker compose up -d app`):
+
+```bash
+# Opção 1: login silencioso (usa os defaults do docker-compose.yml: admin@local.dev / change-me-admin)
+SEED_ADMIN_EMAIL=admin@local.dev SEED_ADMIN_PASSWORD=change-me-admin npm run tui
+
+# Opção 2: token fixo (CI/CD, sessões longas)
+TUI_API_TOKEN=eyJhbGc... npm run tui
+
+# Opção 3: API em outro host
+TUI_API_URL=http://api.exemplo.com/graphql SEED_ADMIN_EMAIL=... SEED_ADMIN_PASSWORD=... npm run tui
+```
+
+A primeira execução persiste o token em `env-paths('api-orquestrador').config/session.json`; execuções seguintes reutilizam até `refresh` automático perto da expiração.
 
 ## Layout
 
@@ -160,7 +195,7 @@ Status do cursor de sync (vindo de `sync_cursor`). Tabela compacta, polling 10s.
 ### Stack
 - **Ink 5** — renderiza React no terminal.
 - **graphql-request** — cliente GraphQL minimal.
-- **ink-table** — tabelas formatadas.
+- **`Box`/`Text` do próprio Ink** — `Table` próprio em `src/tui/components/Table.tsx` (substitui `ink-table`, incompatível com a cadeia ESM da TUI; ver [Build e deploy](#build-e-deploy)).
 - **chalk** — cores no console.
 - **ink-text-input**, **ink-select-input** — inputs.
 
@@ -175,7 +210,7 @@ src/tui/
 │   ├── bootstrap.ts        # resolve token + URL
 │   ├── client.ts           # graphql-request wrapper
 │   └── queries.ts          # Q_VEICULOS, Q_POSICOES, etc.
-├── components/             # Header, Sidebar, Footer, Modal, Toast, ...
+├── components/             # Header, Sidebar, Footer, Modal, Toast, Table (próprio), ...
 ├── hooks/                  # useApi, useInterval, useKeypress, useToast
 ├── lib/                    # format, theme, validators, passwordGen
 └── views/                  # 7 views (Users, Clientes, Veiculos, Motoristas, Posicoes, Logs, Sync)
@@ -186,9 +221,42 @@ src/tui/
 - **Spec de design:** `docs/superpowers/specs/2026-06-15-tui-orquestrador-design.md`
 - **Plano de implementação:** `docs/superpowers/plans/2026-06-15-tui-orquestrador.md`
 
+## Build e deploy
+
+A TUI é compilada como um pacote **ESM standalone** em `dist-tui/`, separado do resto do projeto (que continua CJS). Esse isolamento é necessário por duas razões:
+
+1. **`yoga-layout`** (transitiva de `ink`) é ESM e usa **top-level await** (`const Yoga = wrapAssembly(await loadYoga())` em `node_modules/yoga-layout/dist/src/index.js:13`). Em projeto CJS, o register do `tsx` intercepta o `.js` e tenta transformar via esbuild em modo CJS — operação que esbuild recusa (`Top-level await is currently not supported with the "cjs" output format`).
+2. **`ink-table@3.1.0`** é CJS e faz `require("ink")` na sua inicialização. Em Node 22+ isso dispara `ERR_REQUIRE_ASYNC_MODULE` porque `ink` é ESM com top-level await. É a última versão publicada (não tem variante ESM), então foi substituído por `Table` próprio.
+
+### Pipeline
+
+| Etapa | Comando | O que faz |
+| --- | --- | --- |
+| Build | `npm run build:tui` | Roda `tsc` com `tsconfig.tui.json` (`module: ESNext`, `outDir: dist-tui`, `rootDir: src/tui`), depois pós-processa cada `.js` para adicionar `.js` em imports relativos (ESM exige extensão), e cria `dist-tui/package.json` com `{"type":"module"}` (marcador ESM). |
+| Run (host) | `npm run tui` | `build:tui` + `node dist-tui/index.js`. |
+| Run (container) | `docker exec -it api-orquestrador-app node dist-tui/index.js` | A imagem runtime já tem `dist-tui/` copiado do stage builder. |
+
+### Arquivos relevantes
+
+| Arquivo | Função |
+| --- | --- |
+| `tsconfig.tui.json` | ESM tsconfig para a TUI. |
+| `scripts/build-tui.cjs` | Pipeline de build (tsc + patch de imports + marcador ESM). |
+| `dist-tui/` (gitignored) | Output do build. |
+| `src/tui/components/Table.tsx` | Tabela própria (substitui `ink-table`). |
+| `Dockerfile` | Builda `dist-tui/` antes do `npm prune --omit=dev` e copia para o stage runtime. |
+
+### Rebuild da imagem
+
+```bash
+docker compose build app          # rebuild após mexer em src/tui/
+docker compose up -d              # recria o container para usar a nova imagem
+```
+
 ## Limitações conhecidas
 
 - **Sem detalhe de linha (modal):** as colunas são fixas; modal de detalhe com JSON formatado ainda não implementado. Ver `docs/api.md` para referência de tipos.
 - **Sem auth visível:** a TUI assume que o operador tem acesso ao container. Não há tela de login ou logout (o token persiste em `session.json`).
 - **Mapa (placeholder):** o atalho `m` em Posições → Recentes é placeholder; não renderiza mapa.
 - **Tabela única por view:** uma view = uma tabela. Sem agregações ou gráficos.
+- **Tabela visual mais simples:** o `Table` próprio (substituindo `ink-table`) renderiza colunas em texto plano com separador de `─`. Sem bordas ASCII art, sem alinhamento configurável por coluna. Suficiente para leitura em terminal padrão; se precisar de visual mais polido, considere PR com versão usando `ink-table` ESM (ou outra lib) quando aparecer.

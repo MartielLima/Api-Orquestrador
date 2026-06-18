@@ -13,8 +13,11 @@ Cobertura de métodos Sascar (v1): clientes, veículos, motoristas, posições (
 ### TUI (cockpit do terminal, sem Postman, sem curl, sem psql)
 
 ```bash
-# dentro do container ou com a API rodando em http://localhost:4000/graphql
+# Pelo host, com a API rodando em http://localhost:4000/graphql (recomendado)
 npm run tui
+
+# Ou dentro do container (requer imagem com dist-tui/ — ver docs/tui.md)
+docker exec -it api-orquestrador-app node dist-tui/index.js
 ```
 
 A TUI assume que o operador já tem acesso ao container — **não há tela de login**. O token é resolvido por `src/tui/api/bootstrap.ts` nesta ordem:
@@ -211,6 +214,7 @@ curl -sS -X POST http://localhost:4000/ \
 
 - `npm run dev` — desenvolvimento (tsx watch + SIGTERM clean)
 - `npm run build` — `tsc` → `dist/`
+- `npm run build:tui` — builda a TUI como ESM standalone em `dist-tui/` (precisa rodar antes do `npm run tui`; o script `tui` já chama)
 - `npm start` — produção
 - `npm run tui` — TUI (cockpit do terminal)
 - `npm test` — jest (66 backend + 50 TUI = 116 testes; 1 skipped)
@@ -290,8 +294,8 @@ node-cron  ──►  job syncPositions (a cada 10 min, opt-in)
 
 A imagem (`api-orquestrador:0.1.0`) é multi-stage (Node 22-alpine):
 
-1. **Builder**: clona o `sascar-sdk` do GitHub no tag `v1.1.1` (`git clone --branch v1.1.1` via `SASCAR_SDK_REF`), builda seu `dist/`, instala deps (com `npm rebuild bcrypt` para o native binding), compila nosso TS.
-2. **Runtime**: imagem limpa com `node_modules` podado, `dist/` compilado, `src/db/migrations/` para o script de migration rodar, e o `docker-entrypoint.sh` que:
+1. **Builder**: clona o `sascar-sdk` do GitHub no tag `v1.1.1` (`git clone --branch v1.1.1` via `SASCAR_SDK_REF`), builda seu `dist/`, instala deps (com `npm rebuild bcrypt` para o native binding), compila nosso TS, builda a TUI como ESM standalone em `dist-tui/` (via `npm run build:tui`, antes do `npm prune`).
+2. **Runtime**: imagem limpa com `node_modules` podado, `dist/` compilado, `dist-tui/` (TUI ESM), `src/db/migrations/` para o script de migration rodar, e o `docker-entrypoint.sh` que:
    - Aguarda o Postgres responder
    - Roda migrations (idempotente)
    - Roda seed do admin (idempotente)
