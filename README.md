@@ -227,6 +227,21 @@ Requer credenciais Sascar válidas (no `.env` ou inline) e o container postgres 
 
 Use para debug local, validação de release, ou smoke job. **Não rodar em CI sem secret management.**
 
+## Benchmark massivo
+
+Para benchmark de chamadas Sascar em escala, use `npm run benchmark:sascar`. O script itera por todos os veículos do `veiculos_cache` em 3 grupos (blackbox, CAN bus, posições históricas) e mede o tempo de cada chamada. Salva relatório em `reports/benchmark-sascar-*.txt`.
+
+**Configurável via env vars:**
+- `BENCHMARK_VEHICLE_LIMIT` (default 5) — número de veículos.
+- `BENCHMARK_DAYS_BACK` (default 7) — range do blackbox (janelas de 10min).
+- `BENCHMARK_MONTH_DAYS_BACK` (default 35) — range das posições históricas.
+
+**Atenção:** para N veículos, o Grupo 1 (blackbox) faz N × ~144 chamadas SOAP (144 janelas de 10min × 7 dias). Comece com `BENCHMARK_VEHICLE_LIMIT=1` para validar a pipeline.
+
+**Limitações conhecidas:**
+- `solicitarEventosCaixaPreta` está desativado pela Sascar — o grupo 1 vai retornar erros até a Sascar reativar o método.
+- `obterDadosAdicionais` requer veículo com gerenciadora e nota cadastrada — pode falhar com "veiculo nao pertence a gerenciadora".
+
 ## Arquitetura
 
 ```
