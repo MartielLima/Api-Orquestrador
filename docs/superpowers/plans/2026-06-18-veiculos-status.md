@@ -92,7 +92,7 @@ SASCAR_SENHA="dummy" \
 npm test
 ```
 
-Esperado: 51 suites / 172 tests passando. Se falhar, registrar a primeira falha e seguir para Task 0.5.
+Esperado: 52 suites / 172 tests passando. Se falhar, registrar a primeira falha e seguir para Task 0.5.
 
 - [ ] **Step 5: Rodar lint**
 
@@ -739,7 +739,7 @@ SASCAR_SENHA="dummy" \
 npm test
 ```
 
-Esperado: 51 suites / 172 tests passando.
+Esperado: 52 suites / 172 tests passando.
 
 - [ ] **Step 3: Rodar lint final**
 

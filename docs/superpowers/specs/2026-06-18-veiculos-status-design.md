@@ -113,7 +113,7 @@ Camada de domínio pura, sem dependência do `cachedQuery` nem de GraphQL.
 
 ## Riscos
 
-- **Latência da query batched.** O `DISTINCT ON` usa índice `(id_veiculo, data_posicao DESC)` se existir; sem índice, faz sort de todas as rows de `posicoes`. Em contas com 1M+ de posições, isso fica perceptível. Mitigação: o índice já existe implicitamente via `UNIQUE (id_veiculo, id_pacote)` na criação da tabela? **Não.** Precisamos criar um índice composto `(id_veiculo, data_posicao DESC)`. **(Atenção para o follow-up abaixo.)**
+- **Latência da query batched.** O `DISTINCT ON` usa índice `(id_veiculo, data_posicao DESC)` — **índice já presente** desde `0003_posicoes.sql:18` (`CREATE INDEX idx_posicoes_veiculo_data ON posicoes(id_veiculo, data_posicao DESC)`), criado no scaffold inicial. Sem ação adicional.
 - **`online = false` quando o cron está desligado.** Heurística 10min. Operador pode interpretar como "veículo offline" quando na verdade é "sync desligado". Documentado na API reference; trade-off aceito (alternativa seria Sascar em cada request, que não escala).
 - **Schema versionado.** Mudança é aditiva (campo novo, sub-types novos, todos nullable ou com default seguro). Sem breaking change para clientes que não pedem `status`.
 - **Sub-types granulares podem ser overkill para o caso de uso atual.** Operador raramente quer `temperatura1` na lista. Trade-off: TUI só lê 3 flags (`bloqueado`, `ignicaoLigada`, `online`); o resto fica disponível via API para clientes futuros sem custo de payload (Apollo só serializa o que foi pedido).
@@ -140,6 +140,7 @@ Camada de domínio pura, sem dependência do `cachedQuery` nem de GraphQL.
 
 ## Follow-up (não-bloqueante, capturado para próxima sessão)
 
-- **Índice composto `(id_veiculo, data_posicao DESC)`** em `posicoes` para a query `DISTINCT ON` escalar. Criar migration `0006_posicoes_id_veiculo_data_posicao_idx.sql`. Não incluído nesta spec para manter o escopo focado na feature.
 - **Telemetria histórica estruturada** (`posicao_eventos` ou `posicao_telemetria`): blackbox (caixa preta), consumo de combustível, rede CAN, RPM, força G, e qualquer outro campo de telemetria que o Sascar devolva no `posicoes.raw`. O `VeiculoStatus` atual expõe **apenas o último** valor de cada campo — não histórico. Investigar primeiro quais campos realmente chegam no `raw` via `SELECT DISTINCT jsonb_object_keys(raw) FROM posicoes` num banco com dados reais. O método `solicitarEventosCaixaPreta` está `@deprecated` e desativado pela Sascar; pode ser que a "caixa preta" relevante venha embutida no `raw` de cada posição. Decidir formato (colunas tipadas vs. JSONB indexado) só após o levantamento.
 - **Time log sempre disponível** (audit trail de eventos de telemetria): garantir que cada pacote persistido tenha `created_at`/`received_at` (já temos via `synced_via` + `data_pacote` + `data_posicao`, mas pode valer formalizar com `INSERT ... RETURNING *` e um log estruturado por job de captura).
+
+> Nota: o índice composto `(id_veiculo, data_posicao DESC)` mencionado na seção "Riscos" da versão inicial desta spec já existe desde a migration `0003_posicoes.sql` (criada no scaffold de 2026-06-13). Sem ação adicional.

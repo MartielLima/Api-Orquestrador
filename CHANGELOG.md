@@ -28,7 +28,7 @@ Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue 
 ### Notes
 
 - PR https://github.com/MartielLima/Api-Orquestrador/pull/1 bundles 11 commits (pin + integration + cache + 4 bug fixes + docs).
-- 51 test suites / 172 tests passing (was 40 / 78 before this session). +37 new tests for the `VeiculoStatus` feature: 20 unit (mapper), 6 integration (batch SQL helper), 2 integration (GraphQL `Query.veiculos { status }`), 9 unit (TUI status cell renderer).
+- 52 test suites / 172 tests passing (was 40 / 78 before this session). +37 new tests for the `VeiculoStatus` feature: 20 unit (mapper), 6 integration (batch SQL helper), 2 integration (GraphQL `Query.veiculos { status }`), 9 unit (TUI status cell renderer).
 - Two pre-existing issues remain documented in `docs/api.md` → Known Issues (5: `getPosicoesRecentes` does sequential sync per vehicle; 6: `cachedQuery` in `posicoes.ts` is structurally confusing). Neither is a blocker — captured as follow-up.
 
 
