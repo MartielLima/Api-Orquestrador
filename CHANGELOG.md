@@ -10,6 +10,7 @@ Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue 
 - **feat(integration)**: docker-compose `dns` now lists `8.8.8.8` / `1.1.1.1` alongside the embedded resolver, so the app container can reach external hosts in environments where `127.0.0.11` doesn't forward.
 - **feat(integration)**: New `BigInt` GraphQL scalar; `Veiculo.idEquipamento` switched to it (serialized as string, preserves precision past 2³¹ — Sascar returns values like 9.3B).
 - **feat(integration)**: New DB migration `0005_veiculos_id_equipamento_bigint.sql` widens `id_equipamento` to `BIGINT` (was `INTEGER`, overflow on real data).
+- **feat(graphql)**: New `VeiculoStatus` type and `Veiculo.status` field — live state (bloqueio, ignição, localização, GPS, jamming, combustível, sensores, alarme) derived from the most recent `posicoes` packet per vehicle. Resolver enriches `Query.veiculos` with a single batched `DISTINCT ON` query (no N+1, no Sascar passthrough). Freshness inherits from the existing `syncPositions` cron (default 10min) — `status.online` is a 10min heuristic via `data_posicao > now() - interval`. `status: null` when the vehicle has no position yet. TUI gains a `status` column with ASCII badges (`[B]` bloqueado, `[I]` ignição, `[+]` online).
 - **fix(schema)**: `Posicao.idPacote` and `SyncCursor.lastIdPacote` switched to `BigInt` (was `Int`, broke on real Sascar data > 2³¹).
 - **fix(cache)**: `cachedQuery` now uses `ON CONFLICT (primaryKey) DO UPDATE SET ... fetched_at, expires_at` (was `ON CONFLICT DO NOTHING` without a target). Cached rows refresh correctly on each cache miss, so the cache actually works.
 
@@ -27,7 +28,7 @@ Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue 
 ### Notes
 
 - PR https://github.com/MartielLima/Api-Orquestrador/pull/1 bundles 11 commits (pin + integration + cache + 4 bug fixes + docs).
-- 45 test suites / 129 tests passing (was 40 / 78 before this session).
+- 51 test suites / 172 tests passing (was 40 / 78 before this session). +37 new tests for the `VeiculoStatus` feature: 20 unit (mapper), 6 integration (batch SQL helper), 2 integration (GraphQL `Query.veiculos { status }`), 9 unit (TUI status cell renderer).
 - Two pre-existing issues remain documented in `docs/api.md` → Known Issues (5: `getPosicoesRecentes` does sequential sync per vehicle; 6: `cachedQuery` in `posicoes.ts` is structurally confusing). Neither is a blocker — captured as follow-up.
 
 

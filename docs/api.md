@@ -241,6 +241,22 @@ Lista de veículos. Mapeia para `obterVeiculos` no SDK.
 - `descricao: String` — descrição livre.
 - `idEquipamento: BigInt` — ID do equipamento rastreador (string no JSON, pode exceder 2³¹ — ex: 9322440283).
 - `fetchedAt`, `expiresAt: DateTime!`.
+- `status: VeiculoStatus` — estado vivo derivado do último pacote em `posicoes` (ver `VeiculoStatus` abaixo). `null` se o veículo nunca teve posição registrada.
+
+**`VeiculoStatus`** (extraído de `posicoes.raw` + colunas; sem chamada Sascar extra):
+- `bloqueado: Boolean!` — `raw.bloqueio === 1`.
+- `ignicaoLigada: Boolean!` — coluna `posicoes.ignicao === 1`.
+- `online: Boolean!` — `data_posicao > now() - 10 minutes` (heurística). Se o cron `syncPositions` estiver desligado, fica `false` rapidamente.
+- `localizacao: VeiculoStatusLocalizacao!` — `{ latitude, longitude, velocidade, direcao? }` da última posição.
+- `gps: Boolean!` — `raw.gps === 1` (fix GPS válido).
+- `jamming: Boolean!` — `raw.jamming === 1` (sinal de jamming detectado).
+- `combustivel: VeiculoStatusCombustivel` — `{ nivel, litrometro }` de `raw.nivelCombustivel` / `raw.litrometro`. `null` se ausentes.
+- `sensores: VeiculoStatusSensores!` — `{ tensao?, rpm?, temperatura1?, temperatura2?, temperatura3? }` de `raw.*` (campos nulos quando ausentes).
+- `alarme: VeiculoStatusAlarme!` — `{ statusAncora?, pontoEntrada, pontoSaida, ultimaMensagem: { nome, conteudo, texto }? }` derivados de `raw.statusAncora` / `raw.pontoEntrada` / `raw.pontoSaida` / `raw.nomeMensagem`+`conteudoMensagem`+`textoMensagem`. `ultimaMensagem` é `null` quando os 3 campos são vazios.
+- `atualizadoEm: DateTime!` — `data_posicao` do último pacote.
+- `idadeSegundos: Int!` — `floor((now - data_posicao) / 1000)`.
+
+**Implementação:** o resolver roda 1 query SQL extra (`SELECT DISTINCT ON (id_veiculo) ... FROM posicoes WHERE id_veiculo = ANY($1) ORDER BY id_veiculo, data_posicao DESC`) por chamada de `veiculos` — **N+1 evitado**, escala para centenas de veículos com 1 round-trip. Veículos sem posição retornam `status: null` (não quebram a query).
 
 **Erros:** mesmos de `clientes`.
 

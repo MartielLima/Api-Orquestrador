@@ -121,7 +121,7 @@ Documentação completa (exemplos, códigos de erro, notas por método): [`docs/
 | `me` | sim | `User!` | Usuário autenticado (a partir do JWT). |
 | `users` | admin | `[User!]!` | Lista todos os usuários. |
 | `clientes(idCliente, quantidade=1000)` | sim | `[Cliente!]!` | Cadastro de clientes. Cache 24h. |
-| `veiculos(idVeiculo, quantidade=1000)` | sim | `[Veiculo!]!` | Cadastro de veículos. Cache 24h. |
+| `veiculos(idVeiculo, quantidade=1000)` | sim | `[Veiculo!]!` | Cadastro de veículos. Cache 24h. Cada item traz `status` vivo (último pacote `posicoes`). |
 | `motoristas(idMotorista, quantidade=1000)` | sim | `[Motorista!]!` | Cadastro de motoristas. Cache 24h. |
 | `posicoesRecentes(quantidade=1000)` | sim | `[Posicao!]!` | Posições recentes (últimos 5min) do banco local. |
 | `posicoesPorVeiculo(idVeiculo!, dataInicio!, dataFim!)` | sim | `[Posicao!]!` | Posições de um veículo em intervalo (sincroniza antes). |
@@ -149,7 +149,8 @@ Documentação completa (exemplos, códigos de erro, notas por método): [`docs/
 | `AuthPayload` | `accessToken: String!`, `refreshToken: String!`, `user: User!` |
 | `RefreshToken` | `id: ID!`, `userId: ID!`, `createdAt: DateTime!`, `expiresAt: DateTime!`, `revokedAt: DateTime` |
 | `Cliente` | `idCliente: Int!`, `cnpj: String`, `cpf: String`, `nome: String!`, `fetchedAt: DateTime!`, `expiresAt: DateTime!` |
-| `Veiculo` | `idVeiculo: Int!`, `placa: String!`, `idCliente: Int`, `descricao: String`, `idEquipamento: BigInt`, `fetchedAt: DateTime!`, `expiresAt: DateTime!` |
+| `Veiculo` | `idVeiculo: Int!`, `placa: String!`, `idCliente: Int`, `descricao: String`, `idEquipamento: BigInt`, `fetchedAt: DateTime!`, `expiresAt: DateTime!`, `status: VeiculoStatus` (null se sem posição) |
+| `VeiculoStatus` | `bloqueado: Boolean!`, `ignicaoLigada: Boolean!`, `online: Boolean!`, `localizacao: VeiculoStatusLocalizacao!`, `gps: Boolean!`, `jamming: Boolean!`, `combustivel: VeiculoStatusCombustivel`, `sensores: VeiculoStatusSensores!`, `alarme: VeiculoStatusAlarme!`, `atualizadoEm: DateTime!`, `idadeSegundos: Int!` (ver `docs/api.md` para sub-types) |
 | `Motorista` | `idMotorista: Int!`, `nome: String!`, `tipoDocumento: String`, `fetchedAt: DateTime!`, `expiresAt: DateTime!` |
 | `Posicao` | `idPacote: Int!`, `idVeiculo: Int!`, `dataPosicao: DateTime!`, `dataPacote: DateTime!`, `latitude: Float!`, `longitude: Float!`, `velocidade: Float!`, `ignicao: Int`, `direcao: Int`, `odometro: Float`, `syncedVia: String!` |
 | `SyncCursor` | `method: String!`, `idVeiculo: Int!`, `lastIdPacote: Int`, `lastSyncedAt: DateTime!` |
