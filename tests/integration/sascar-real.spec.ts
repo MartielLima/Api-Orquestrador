@@ -1,35 +1,50 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Pool } from 'pg';
-import { buildSascarClient, SascarOrchestrator } from '../../src/orchestrator/SascarOrchestrator';
-import { getClientes } from '../../src/domain/clientes';
-import { getVeiculos } from '../../src/domain/veiculos';
-import { getMotoristas } from '../../src/domain/motoristas';
-import { fetchAndUpsertPosicoes } from '../../src/domain/posicoes';
-import { buildTestServer } from '../helpers/server';
+
+// NÃO importar nada de src/ ou de tests/helpers/ aqui.
+// Esses imports serão dinâmicos dentro de beforeAll.
 
 const runReal = process.env.RUN_REAL_SASCAR_TESTS === '1';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const describeIf = runReal ? describe : describe.skip;
-
-// Pula a suite inteira se faltar credencial, mesmo com RUN_REAL_SASCAR_TESTS=1.
 const requiredEnv = ['SASCAR_WSDL_URL', 'SASCAR_USUARIO', 'SASCAR_SENHA', 'DATABASE_URL'];
 const missingEnv = requiredEnv.filter((k) => !process.env[k]);
 const describeIfReady = runReal && missingEnv.length === 0 ? describe : describe.skip;
 
 describeIfReady('Sascar integration real (gated by RUN_REAL_SASCAR_TESTS=1)', () => {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  const sascar = buildSascarClient({
-    usuario: process.env.SASCAR_USUARIO!,
-    senha: process.env.SASCAR_SENHA!,
-    wsdlUrl: process.env.SASCAR_WSDL_URL!,
+  let ctx: any;
+  let getClientes: any;
+  let getVeiculos: any;
+  let getMotoristas: any;
+  let fetchAndUpsertPosicoes: any;
+  let buildTestServer: any;
+
+  beforeAll(async () => {
+    // Dynamic imports — só avaliados quando a suite REALMENTE roda.
+    const sascarMod = await import('../../src/orchestrator/SascarOrchestrator');
+    const clientesMod = await import('../../src/domain/clientes');
+    const veiculosMod = await import('../../src/domain/veiculos');
+    const motoristasMod = await import('../../src/domain/motoristas');
+    const posicoesMod = await import('../../src/domain/posicoes');
+    const helpersMod = await import('../helpers/server');
+
+    const sascar = sascarMod.buildSascarClient({
+      usuario: process.env.SASCAR_USUARIO!,
+      senha: process.env.SASCAR_SENHA!,
+      wsdlUrl: process.env.SASCAR_WSDL_URL!,
+    });
+    const orch = new sascarMod.SascarOrchestrator(sascar);
+    ctx = {
+      user: null,
+      logger: console as unknown as any,
+      db: { execute: (q: any) => pool.query(q.sql, q.args) } as any,
+      orchestrator: orch,
+    };
+    getClientes = clientesMod.getClientes;
+    getVeiculos = veiculosMod.getVeiculos;
+    getMotoristas = motoristasMod.getMotoristas;
+    fetchAndUpsertPosicoes = posicoesMod.fetchAndUpsertPosicoes;
+    buildTestServer = helpersMod.buildTestServer;
   });
-  const orch = new SascarOrchestrator(sascar);
-  const ctx = {
-    user: null,
-    logger: console as unknown as any,
-    db: { execute: (q: any) => pool.query(q.sql, q.args) } as any,
-    orchestrator: orch,
-  } as any;
 
   beforeEach(async () => {
     await pool.query('DELETE FROM posicoes');
@@ -71,7 +86,6 @@ describeIfReady('Sascar integration real (gated by RUN_REAL_SASCAR_TESTS=1)', ()
     });
     expect(res.errors).toBeUndefined();
     const sample = (res.data as any).veiculos[0];
-    // idEquipamento vem como string (BigInt scalar) — pode ser null se rastreador sem chip
     if (sample.idEquipamento !== null) {
       expect(typeof sample.idEquipamento).toBe('string');
     }
@@ -92,7 +106,6 @@ describeIfReady('Sascar integration real (gated by RUN_REAL_SASCAR_TESTS=1)', ()
   });
 
   it('obterPacotePosicaoPorRangeJSON → posicoes → Veiculo.status via GraphQL', async () => {
-    // Pega o primeiro veículo do cache (populado pelo test anterior OU re-popula)
     if ((await pool.query('SELECT COUNT(*)::int AS c FROM veiculos_cache')).rows[0].c === 0) {
       await getVeiculos(ctx, { quantidade: 1 });
     }
