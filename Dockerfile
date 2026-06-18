@@ -34,6 +34,12 @@ COPY tsconfig.json ./
 COPY src ./src
 RUN npx tsc
 
+# Build the TUI as a standalone ESM package (uses tsx/tsc which are devDeps,
+# so it must run before `npm prune --omit-dev`). See scripts/build-tui.cjs.
+COPY tsconfig.tui.json ./
+COPY scripts ./scripts
+RUN npm run build:tui
+
 # Strip devDeps to keep node_modules small for the runtime image.
 # bcrypt's native binding is preserved because it's a prod dep.
 RUN npm prune --omit=dev && \
@@ -53,6 +59,7 @@ ENV NODE_ENV=production
 COPY --from=builder --chown=node:node /app/package.json ./package.json
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=builder --chown=node:node /app/dist-tui ./dist-tui
 COPY --from=builder --chown=node:node /app/src/db/migrations ./src/db/migrations
 COPY --chown=node:node docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 

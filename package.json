@@ -10,6 +10,7 @@
   "scripts": {
     "postinstall": "node src/scripts/postinstall.js",
     "build": "tsc",
+    "build:tui": "node scripts/build-tui.cjs",
     "typecheck": "tsc --noEmit",
     "typecheck:scripts": "tsc --noEmit --project tsconfig.scripts.json",
     "benchmark:sascar": "tsx scripts/benchmark-sascar.ts",
@@ -26,7 +27,7 @@
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:seed": "tsx src/scripts/seed-admin.ts",
     "db:reset": "tsx src/scripts/migrate.ts --reset",
-    "tui": "tsx src/tui/index.tsx"
+    "tui": "npm run build:tui && node dist-tui/index.js"
   },
   "dependencies": {
     "@apollo/server": "^4.10.0",
@@ -43,7 +44,6 @@
     "ink-gradient": "^3.0.0",
     "ink-select-input": "^6.2.0",
     "ink-spinner": "^5.0.0",
-    "ink-table": "^3.1.0",
     "ink-text-input": "^6.0.0",
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.3",

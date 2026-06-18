@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-tui/
 .env
 .env.local
 *.log
