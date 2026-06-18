@@ -40,10 +40,11 @@ describe('Query.veiculos { status } (integration)', () => {
       `INSERT INTO veiculos_cache (id_veiculo, placa, id_cliente, descricao, raw, fetched_at, expires_at)
        VALUES (700, 'XYZ1234', 1, 'Caminhão teste', '{}'::jsonb, now(), now() + interval '1 day')`,
     );
+    const dataPosicao = new Date(Date.now() - 60_000).toISOString();
     await insertPosicao(pool, {
       idVeiculo: 700,
       idPacote: '1',
-      dataPosicao: '2026-06-18T11:55:00.000Z',
+      dataPosicao,
       ignicao: 1,
       raw: { bloqueio: 1, gps: 1, jamming: 0 },
     });
@@ -75,7 +76,7 @@ describe('Query.veiculos { status } (integration)', () => {
     expect(v.status.bloqueado).toBe(true);
     expect(v.status.ignicaoLigada).toBe(true);
     expect(v.status.online).toBe(true);
-    expect(v.status.atualizadoEm).toBe('2026-06-18T11:55:00.000Z');
+    expect(v.status.atualizadoEm).toBe(dataPosicao);
     expect(v.status.idadeSegundos).toBeGreaterThanOrEqual(0);
     expect(v.status.localizacao.latitude).toBe(-23.5);
     expect(v.status.localizacao.longitude).toBe(-46.6);
