@@ -405,3 +405,292 @@ Bugs #1–#4 foram corrigidos no mesmo PR do pin (ver `CHANGELOG.md` → `[Unrel
 | 2 | Erros de auth vinham como `INTERNAL_SERVER_ERROR` | `UserError` + `formatError` plugin no Apollo (commits `74e6d35` + `b9ac030`) |
 | 3 | `posicoesRecentes.idPacote` overflow em dados reais | `idPacote: BigInt!` no schema (commit `ada026f`) |
 | 4 | `cachedQuery` em cadastros não mapeava erros Sascar | `.catch(mapSascarError)` no fetcher (commit `ee5c01a`) |
+
+---
+
+## Exemplos de respostas reais
+
+Valores capturados em produção (conta SasIntegra real, 2026-06-18). Use como referência para o shape dos retornos.
+
+### `Query.clientes`
+
+```graphql
+query {
+  clientes(quantidade: 2) {
+    idCliente cnpj cpf nome fetchedAt expiresAt
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "clientes": [
+      {
+        "idCliente": 202977,
+        "cnpj": "5975935000107",
+        "cpf": "0",
+        "nome": "RM MOTA CIA LTDA",
+        "fetchedAt": "2026-06-18T19:03:43.438Z",
+        "expiresAt": "2026-06-18T19:04:43.438Z"
+      }
+    ]
+  }
+}
+```
+
+> **Nota:** `cpf: "0"` é literal da Sascar (não `null`) — representa "sem CPF". Use `cnpj ?? cpf` no cliente.
+
+### `Query.veiculos` (com `status` desde v0.2.0)
+
+```graphql
+query {
+  veiculos(quantidade: 2) {
+    idVeiculo placa idCliente idEquipamento fetchedAt expiresAt
+    status {
+      bloqueado ignicaoLigada online
+      localizacao { latitude longitude velocidade direcao }
+      gps jamming
+      combustivel { nivel litrometro }
+      sensores { tensao rpm temperatura1 temperatura2 temperatura3 }
+      alarme {
+        statusAncora pontoEntrada pontoSaida
+        ultimaMensagem { nome conteudo texto }
+      }
+      atualizadoEm idadeSegundos
+    }
+  }
+}
+```
+
+**Exemplo 1 — veículo parado, sem alarmes, combustível cheio** (caso real de `posicao` com ign=0, vel=0):
+
+```json
+{
+  "data": {
+    "veiculos": [
+      {
+        "idVeiculo": 1832881,
+        "placa": "NTO7934",
+        "idCliente": 202977,
+        "idEquipamento": "9322440283",
+        "fetchedAt": "2026-06-18T19:03:43.438Z",
+        "expiresAt": "2026-06-18T19:04:43.438Z",
+        "status": {
+          "bloqueado": false,
+          "ignicaoLigada": false,
+          "online": false,
+          "localizacao": {
+            "latitude": -17.5897424,
+            "longitude": -39.7412032,
+            "velocidade": 0,
+            "direcao": 235
+          },
+          "gps": true,
+          "jamming": false,
+          "combustivel": { "nivel": "100", "litrometro": "5343.539" },
+          "sensores": { "tensao": 24, "rpm": 0, "temperatura1": -125, "temperatura2": -125, "temperatura3": -125 },
+          "alarme": { "statusAncora": null, "pontoEntrada": false, "pontoSaida": false, "ultimaMensagem": null },
+          "atualizadoEm": "2026-06-17T01:15:33.000Z",
+          "idadeSegundos": 150586
+        }
+      }
+    ]
+  }
+}
+```
+
+**Exemplo 2 — veículo em movimento, bloqueado, com alarme** (ign=1, vel=65, com mensagem):
+
+```json
+{
+  "data": {
+    "veiculos": [
+      {
+        "idVeiculo": 2223613,
+        "status": {
+          "bloqueado": true,
+          "ignicaoLigada": true,
+          "online": true,
+          "localizacao": { "latitude": -25.87, "longitude": -50.81, "velocidade": 65, "direcao": 90 },
+          "gps": true,
+          "jamming": false,
+          "combustivel": { "nivel": "42", "litrometro": "3210.123" },
+          "sensores": { "tensao": 27.5, "rpm": 2200, "temperatura1": 85, "temperatura2": 90, "temperatura3": 78 },
+          "alarme": {
+            "statusAncora": 2,
+            "pontoEntrada": true,
+            "pontoSaida": false,
+            "ultimaMensagem": { "nome": "BLOQUEIO", "conteudo": "Veículo bloqueado remotamente", "texto": "" }
+          },
+          "atualizadoEm": "2026-06-18T19:04:49.424Z",
+          "idadeSegundos": 30
+        }
+      }
+    ]
+  }
+}
+```
+
+> **Edge cases observados:**
+> - `temperatura1/2/3: -125` é sentinela da Sascar para "sensor desconectado" (não é `null`).
+> - `statusAncora: null` quando `raw.statusAncora` é null; valores 0/1/2/3 quando populado.
+> - `ultimaMensagem: null` quando `raw.nomeMensagem`, `conteudoMensagem`, `textoMensagem` são todos vazios.
+> - `combustivel: null` quando `raw.nivelCombustivel` e `raw.litrometro` são ambos null.
+> - `online: false` quando `data_posicao` tem mais de 10 min (heurística 10min × 6/h = 144 posições/dia por veículo).
+> - Veículos sem posição em `posicoes` retornam `status: null` (não quebram a query).
+
+### `Query.motoristas`
+
+```graphql
+query {
+  motoristas(quantidade: 2) {
+    idMotorista nome tipoDocumento fetchedAt expiresAt
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "motoristas": [
+      { "idMotorista": 2661329, "nome": "JORGE LUIZ ANICETO NASCIMENTO", "tipoDocumento": "F", "fetchedAt": "2026-06-18T19:03:53.011Z", "expiresAt": "2026-06-18T19:04:53.010Z" },
+      { "idMotorista": 2661467, "nome": "EDVALDO ROCHA FERREIRA", "tipoDocumento": "F", "fetchedAt": "2026-06-18T19:03:53.121Z", "expiresAt": "2026-06-18T19:04:53.010Z" }
+    ]
+  }
+}
+```
+
+### `Query.posicoesRecentes`
+
+```graphql
+query {
+  posicoesRecentes(quantidade: 3) {
+    idPacote idVeiculo dataPosicao velocidade ignicao
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "posicoesRecentes": [
+      { "idPacote": "15021249998", "idVeiculo": 1950543, "dataPosicao": "2026-06-17T01:15:33.000Z", "velocidade": 0, "ignicao": 0 },
+      { "idPacote": "15021249311", "idVeiculo": 1832881, "dataPosicao": "2026-06-17T01:15:15.000Z", "velocidade": 0, "ignicao": 0 },
+      { "idPacote": "15021248903", "idVeiculo": 637242,  "dataPosicao": "2026-06-17T01:15:05.000Z", "velocidade": 0, "ignicao": 0 }
+    ]
+  }
+}
+```
+
+> **Nota:** `idPacote` é `BigInt!` mas serializa como **string** no JSON (preserva precisão > 2³¹). Não compare como `Number` no cliente JS — mantenha como `String` para não perder precisão.
+
+### `Query.posicoesPorVeiculo`
+
+```graphql
+query {
+  posicoesPorVeiculo(
+    idVeiculo: 1832881,
+    dataInicio: "2026-06-17T00:00:00Z",
+    dataFim: "2026-06-17T04:30:00Z"
+  ) {
+    idPacote idVeiculo dataPosicao dataPacote
+    latitude longitude velocidade ignicao direcao odometro syncedVia
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "posicoesPorVeiculo": [
+      {
+        "idPacote": "15021070727",
+        "idVeiculo": 1832881,
+        "dataPosicao": "2026-06-17T00:00:00.000Z",
+        "dataPacote": "2026-06-16T23:59:14.000Z",
+        "latitude": -17.5897424,
+        "longitude": -39.7412032,
+        "velocidade": 0,
+        "ignicao": 0,
+        "direcao": 235,
+        "odometro": 169154,
+        "syncedVia": "graphql"
+      }
+    ]
+  }
+}
+```
+
+> **Comportamento:** a query chama `fetchAndUpsertPosicoes` antes de ler do DB (puxa pacotes novos do cursor de sync). Em contas com >50 veículos, a primeira chamada pode demorar ~30s (1 chamada SOAP + inserts). O cap é ~200 linhas por default (não configurável via GraphQL).
+
+### `Query.syncStatus`
+
+```graphql
+query {
+  syncStatus {
+    method idVeiculo lastIdPacote lastSyncedAt
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "syncStatus": [
+      {
+        "method": "obterPacotePosicaoPorRangeJSON",
+        "idVeiculo": 777,
+        "lastIdPacote": "15021249998",
+        "lastSyncedAt": "2026-06-18T19:04:23.411Z"
+      }
+    ]
+  }
+}
+```
+
+> Vazio se o job `syncPositions` está desligado (`SYNC_POSITIONS_ENABLED=false`) e nenhuma `posicoesPorVeiculo` foi chamada.
+
+### `Query.requestLog`
+
+```graphql
+query {
+  requestLog(limit: 3) {
+    id method source status cacheHit latencyMs createdAt
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "requestLog": [
+      { "id": "2256", "method": "obterPacotePosicaoPorRangeJSON", "source": "graphql", "status": "ok",         "cacheHit": false, "latencyMs": 30242, "createdAt": "2026-06-18T19:04:23.441Z" },
+      { "id": "2255", "method": "obterMotoristas",                  "source": "graphql", "status": "ok",         "cacheHit": false, "latencyMs": 366,   "createdAt": "2026-06-18T19:03:53.146Z" },
+      { "id": "2254", "method": "obterVeiculos",                   "source": "graphql", "status": "cache_hit",   "cacheHit": true,  "latencyMs": 21,    "createdAt": "2026-06-18T19:03:43.626Z" }
+    ]
+  }
+}
+```
+
+> **Observação:** `status: "cache_hit"` aparece quando `cachedQuery` retornou do Postgres local (TTL 60s); `latencyMs` cai de ~5s para ~20ms. Útil para monitorar efetividade do cache.
+
+### `Query.caixaPretaEventos` (deprecated)
+
+```graphql
+query {
+  caixaPretaEventos(placa: "AAA1111") {
+    id idVeiculo placa dataEvento latitude longitude
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "caixaPretaEventos": []
+  }
+}
+```
+
+> **Sempre retorna `[]`** — `solicitarEventosCaixaPreta` está desativado pela Sascar (sem previsão de retorno). Use `posicoesRecentes` no lugar.
