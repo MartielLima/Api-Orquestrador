@@ -19,3 +19,6 @@ src/**/*.js.map
 src/**/*.d.ts
 !src/scripts/*.d.ts
 src/**/*.d.ts.map
+
+# Benchmark reports
+reports/
