@@ -67,5 +67,9 @@ export async function cachedQuery<T, TRow = any>(
     cacheHit: false,
     latencyMs: Date.now() - start,
   });
-  return fresh;
+  const { rows: inserted } = await db.execute({
+    sql: `SELECT * FROM ${opts.table} WHERE expires_at > now()`,
+    args: [],
+  });
+  return opts.fromRows(inserted);
 }
