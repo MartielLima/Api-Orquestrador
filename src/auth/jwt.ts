@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
 
 export interface AccessPayload {
@@ -19,7 +20,7 @@ export function signAccessToken(payload: AccessPayload, opts: JwtOpts): string {
 }
 
 export function signRefreshToken(payload: RefreshPayload, opts: JwtOpts): string {
-  return jwt.sign(payload, opts.secret, { expiresIn: opts.expiresIn });
+  return jwt.sign(payload, opts.secret, { expiresIn: opts.expiresIn, jwtid: randomUUID() });
 }
 
 export function verifyAccessToken(token: string, opts: { secret: Secret }): AccessPayload {
