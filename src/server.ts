@@ -2,7 +2,7 @@ import { ApolloServer } from '@apollo/server';
 import { startStandaloneServer } from '@apollo/server/standalone';
 import { typeDefs } from './graphql/schema';
 import { resolvers } from './graphql/resolvers';
-import { buildContext, type AppContext } from './context';
+import { buildContext } from './context';
 import { loadConfig } from './config';
 import { createLogger } from './lib/logger';
 import { SascarOrchestrator, buildSascarClient } from './orchestrator/SascarOrchestrator';

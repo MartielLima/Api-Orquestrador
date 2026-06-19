@@ -11,9 +11,6 @@ import { loadConfig } from '../../src/config';
 import { UserError } from '../../src/auth/errors';
 import type { AppContext, AuthUser } from '../../src/context';
 
-const ADMIN_EMAIL = 'admin@local.dev';
-const ADMIN_PASSWORD = 'admin1234';
-
 async function pool(): Promise<Pool> {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL not set');
   return new Pool({ connectionString: process.env.DATABASE_URL });
@@ -81,19 +78,6 @@ async function buildServerAs(user: AuthUser | null, request?: AppContext['reques
       contextValue: ctxWithOrch,
     });
   return { executeOperation };
-}
-
-async function loginAs(email: string, password: string): Promise<string> {
-  const { executeOperation } = await buildServerAs(null);
-  const res = await executeOperation({
-    query: `mutation L($e: String!, $p: String!) {
-      login(email: $e, password: $p) { accessToken user { role } }
-    }`,
-    variables: { e: email, password },
-  });
-  expect(res.body.singleResult.errors).toBeUndefined();
-  const data = res.body.singleResult.data as { login: { accessToken: string } };
-  return data.login.accessToken;
 }
 
 async function readAuditLog(filter: { action?: string; targetId?: string } = {}): Promise<any[]> {
