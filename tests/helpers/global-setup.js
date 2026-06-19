@@ -12,13 +12,17 @@ module.exports = async function globalSetup() {
     const admin = new Client({ connectionString: `${BASE_URL}/postgres` });
     await admin.connect();
     try {
-      await admin.query(`DROP DATABASE IF EXISTS ${dbName}`);
+      await admin.query(`DROP DATABASE IF EXISTS ${dbName} WITH (FORCE)`);
       await admin.query(`CREATE DATABASE ${dbName}`);
     } finally {
       await admin.end();
     }
     execSync(
       `DATABASE_URL='${BASE_URL}/${dbName}' npx tsx src/scripts/migrate.ts`,
+      { stdio: 'pipe' },
+    );
+    execSync(
+      `DATABASE_URL='${BASE_URL}/${dbName}' npx tsx src/scripts/seed-admin.ts`,
       { stdio: 'pipe' },
     );
   }

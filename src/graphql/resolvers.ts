@@ -7,6 +7,7 @@ import { getMotoristas } from '../domain/motoristas';
 import { getPosicoesRecentes, fetchAndUpsertPosicoes } from '../domain/posicoes';
 import { getCaixaPretaEventos } from '../domain/caixaPreta';
 import { loadConfig } from '../config';
+import { requireAuth, requireAdmin } from '../auth/guards';
 import type { AppContext } from '../context';
 
 const cfg = loadConfig();
@@ -21,16 +22,28 @@ export const resolvers = {
   Query: {
     ...userResolvers.Query,
     health: () => 'ok',
-    clientes: (_: unknown, args: any, ctx: AppContext) => getClientes(ctx, args),
-    veiculos: (_: unknown, args: any, ctx: AppContext) => getVeiculos(ctx, args),
-    motoristas: (_: unknown, args: any, ctx: AppContext) => getMotoristas(ctx, args),
-    posicoesRecentes: (_: unknown, args: { quantidade?: number }, ctx: AppContext) =>
-      getPosicoesRecentes(ctx, args.quantidade ?? 1000),
+    clientes: (_: unknown, args: any, ctx: AppContext) => {
+      requireAuth(ctx);
+      return getClientes(ctx, args);
+    },
+    veiculos: (_: unknown, args: any, ctx: AppContext) => {
+      requireAuth(ctx);
+      return getVeiculos(ctx, args);
+    },
+    motoristas: (_: unknown, args: any, ctx: AppContext) => {
+      requireAuth(ctx);
+      return getMotoristas(ctx, args);
+    },
+    posicoesRecentes: (_: unknown, args: { quantidade?: number }, ctx: AppContext) => {
+      requireAuth(ctx);
+      return getPosicoesRecentes(ctx, args.quantidade ?? 1000);
+    },
     posicoesPorVeiculo: async (
       _: unknown,
       args: { idVeiculo: number; dataInicio: string; dataFim: string },
       ctx: AppContext,
     ) => {
+      requireAuth(ctx);
       const { rows: cursorRows } = await ctx.db.execute({
         sql: `SELECT last_synced_at FROM sync_cursor
               WHERE method = 'obterPacotePosicaoPorRangeJSON' AND id_veiculo = $1`,
@@ -62,6 +75,7 @@ export const resolvers = {
       }));
     },
     syncStatus: async (_: unknown, __: unknown, ctx: AppContext) => {
+      requireAdmin(ctx);
       const { rows } = await ctx.db.execute({
         sql: 'SELECT method, id_veiculo, last_id_pacote, last_synced_at FROM sync_cursor ORDER BY method, id_veiculo',
         args: [],
@@ -77,8 +91,12 @@ export const resolvers = {
       _: unknown,
       args: { placa?: string; idVeiculo?: number },
       ctx: AppContext,
-    ) => getCaixaPretaEventos(ctx, args),
+    ) => {
+      requireAuth(ctx);
+      return getCaixaPretaEventos(ctx, args);
+    },
     requestLog: async (_: unknown, args: { limit?: number; method?: string }, ctx: AppContext) => {
+      requireAdmin(ctx);
       const params: any[] = [args.limit ?? 100];
       let where = '';
       if (args.method) {
