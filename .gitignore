@@ -26,3 +26,7 @@ reports/
 
 # Git worktrees
 .worktrees/
+
+# npm install side-effects (empty marker files at repo root)
+/api-orquestrador@*
+/tsx

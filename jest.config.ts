@@ -38,6 +38,10 @@ const config: Config = {
     ],
   },
   testTimeout: 30000,
+  maxWorkers: 4,
+  globalSetup: '<rootDir>/tests/helpers/global-setup.js',
+  globalTeardown: '<rootDir>/tests/helpers/global-teardown.js',
+  setupFiles: ['<rootDir>/tests/helpers/jest-setup.js'],
 };
 
 export default config;
