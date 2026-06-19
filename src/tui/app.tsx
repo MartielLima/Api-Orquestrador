@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Box, Text } from 'ink';
 import { useInput, useApp } from 'ink';
 import { Header } from './components/Header';
@@ -84,7 +84,7 @@ function TuiApp({ api, user, apiUrl, tokenExp }: ApiContext & { tokenExp: number
   });
 
   const active = NAV.find((n) => n.key === viewKey) ?? NAV[0]!;
-  const ctx: ApiContext = { api, user, apiUrl };
+  const ctx = useMemo<ApiContext>(() => ({ api, user, apiUrl }), [api, user, apiUrl]);
 
   return (
     <ApiProvider value={ctx}>

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ToastKind } from '../components/Toast';
 
 export interface ToastEntry {
@@ -37,12 +37,12 @@ export function useToast(): ToastApi {
     [dismiss],
   );
 
-  return {
-    toasts,
-    push,
-    dismiss,
-    success: (m) => push('success', m),
-    error: (m) => push('error', m),
-    info: (m) => push('info', m),
-  };
+  const success = useCallback((m: string) => push('success', m), [push]);
+  const error = useCallback((m: string) => push('error', m), [push]);
+  const info = useCallback((m: string) => push('info', m), [push]);
+
+  return useMemo(
+    () => ({ toasts, push, dismiss, success, error, info }),
+    [toasts, push, dismiss, success, error, info],
+  );
 }
