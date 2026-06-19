@@ -13,6 +13,7 @@ export interface AppContext {
   logger: Logger;
   db: Db;
   orchestrator: SascarOrchestrator;
+  request?: { ip: string | null; userAgent: string | null };
 }
 
 export async function buildContext(): Promise<Omit<AppContext, 'orchestrator'>> {
