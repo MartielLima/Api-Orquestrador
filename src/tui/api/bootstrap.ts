@@ -89,7 +89,7 @@ async function probeHealth(api: ApiClient): Promise<void> {
 
 function isUnauthenticatedError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
-  return /UNAUTHENTICATED/.test(msg);
+  return /"code":"UNAUTHENTICATED"/.test(msg) || /UNAUTHENTICATED/.test(msg);
 }
 
 function buildAuthAwareApi(
@@ -120,7 +120,11 @@ function buildAuthAwareApi(
           user: data.refresh.user,
           accessTokenExp: decodeJwtExp(data.refresh.accessToken),
         };
-        saveSession(next);
+        try {
+          saveSession(next);
+        } catch (e) {
+          console.warn('failed to persist refreshed session:', e);
+        }
         setSession(next);
         currentAccessToken = next.accessToken;
         rawApi.setAuthToken(next.accessToken);
@@ -141,7 +145,7 @@ function buildAuthAwareApi(
   };
 
   const doRequest = <T>(doc: RequestDocument, vars?: Variables): Promise<T> => {
-    rawApi.setAuthToken(currentAccessToken);
+    rawApi.setAuthToken(getSession()?.accessToken ?? null);
     return rawApi.request<T>(doc, vars);
   };
 

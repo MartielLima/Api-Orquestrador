@@ -180,6 +180,43 @@ describe('bootstrapSession', () => {
     }
   });
 
+  it('does not refresh when the access token is still valid', async () => {
+    const future = Math.floor(Date.now() / 1000) + 3600;
+    const oldAccess = makeJwt(future);
+    const persistedRefresh = 'r'.repeat(40);
+
+    saveSession({
+      apiUrl: 'http://localhost:4000/graphql',
+      accessToken: oldAccess,
+      refreshToken: persistedRefresh,
+      user: okUser(),
+      accessTokenExp: future * 1000,
+    });
+
+    const callLog: string[] = [];
+    const fakeFetch = jest.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = String(init?.body ?? '');
+      callLog.push(body.includes('refresh(') ? 'refresh' : body.includes('me ') ? 'me' : 'other');
+      if (body.includes('refresh(')) {
+        return okResponse({ refresh: { accessToken: 'new', refreshToken: 'new', user: okUser() } });
+      }
+      if (body.includes('me ')) return okResponse({ me: okUser() });
+      return okResponse({ health: 'ok' });
+    });
+    const origFetch = globalThis.fetch;
+    (globalThis as unknown as { fetch: unknown }).fetch = fakeFetch;
+    try {
+      const r = await bootstrapSession();
+      expect(r.kind).toBe('ok');
+      if (r.kind !== 'ok') return;
+      await r.api.request<{ me: typeof okUser extends () => infer R ? R : never }>(Q_ME);
+      expect(callLog).toEqual(['other', 'me']);
+      expect(loadSession()?.accessToken).toBe(oldAccess);
+    } finally {
+      (globalThis as unknown as { fetch: unknown }).fetch = origFetch;
+    }
+  });
+
   it('auto-refreshes when an authenticated query returns UNAUTHENTICATED', async () => {
     const future = Math.floor(Date.now() / 1000) + 3600;
     const oldAccess = makeJwt(future);
