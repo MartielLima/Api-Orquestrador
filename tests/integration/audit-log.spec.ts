@@ -129,7 +129,31 @@ describe('audit_log', () => {
     if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL not set');
   });
 
-  it('placeholder', () => {
-    expect(true).toBe(true);
+  describe('createUser', () => {
+    it('grava entry com actor=admin, action=user.create, diff com id/email/role/active', async () => {
+      const { admin } = await seedAdminAndUser();
+      const { executeOperation } = await buildServerAs(admin);
+
+      const newEmail = `created-${Date.now()}@local.dev`;
+      const res = await executeOperation({
+        query: `mutation C($i: CreateUserInput!) { createUser(input: $i) { id email role active } }`,
+        variables: { i: { email: newEmail, password: 'Aa1!aaaa', role: 'user' } },
+      });
+
+      expect(res.body.singleResult.errors).toBeUndefined();
+      const created = (res.body.singleResult.data as { createUser: { id: string; email: string } }).createUser;
+
+      const entries = await readAuditLog({ action: 'user.create', targetId: created.id });
+      expect(entries).toHaveLength(1);
+      expect(entries[0].actor_user_id).toBe(admin.id);
+      expect(entries[0].target_table).toBe('users');
+      expect(entries[0].diff).toEqual({
+        id: created.id,
+        email: newEmail,
+        role: 'user',
+        active: true,
+      });
+      expect(entries[0].user_agent).toBeNull();
+    });
   });
 });

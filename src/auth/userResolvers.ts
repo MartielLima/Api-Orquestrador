@@ -2,6 +2,7 @@ import { requireAuth, requireAdmin } from './guards';
 import { UserError, UserErrorCode } from './errors';
 import { hashPassword } from './password';
 import { createUserSchema, updateUserSchema, resetPasswordSchema } from './validators';
+import { recordAudit } from './audit';
 import type { AppContext } from '../context';
 
 function mapUniqueViolation(e: unknown): UserError {
@@ -88,7 +89,21 @@ export const userResolvers = {
                 RETURNING id, email, role, active, created_at`,
           args: [parsed.data.email, hash, parsed.data.role],
         });
-        return rowToUser(rows[0] as Record<string, unknown>);
+        const created = rowToUser(rows[0] as Record<string, unknown>);
+        await recordAudit(
+          {
+            db: ctx.db,
+            logger: ctx.logger,
+            actorUserId: ctx.user?.id ?? null,
+            ip: ctx.request?.ip ?? null,
+            userAgent: ctx.request?.userAgent ?? null,
+          },
+          'user.create',
+          'users',
+          created.id,
+          { id: created.id, email: created.email, role: created.role, active: created.active },
+        );
+        return created;
       } catch (e) {
         throw mapUniqueViolation(e);
       }
