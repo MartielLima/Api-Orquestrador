@@ -52,7 +52,7 @@ CREATE INDEX idx_audit_log_target ON audit_log(target_table, target_id, created_
 CREATE INDEX idx_audit_log_action_created ON audit_log(action, created_at DESC);
 ```
 
-`actor_user_id` é NULL quando a ação vem de um script/cron (não logado como user). FK para `users(id)` com `ON DELETE SET NULL` (default) — se um user for deletado, suas ações no audit não somem.
+`actor_user_id` é NULL quando a ação vem de um script/cron (não logado como user). FK para `users(id)` com `ON DELETE SET NULL` (explícito) — se um user for deletado, suas ações no audit não somem, e `actor_user_id` vira NULL.
 
 ### 2. Schema Drizzle: `src/db/schema.ts`
 

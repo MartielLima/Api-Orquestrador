@@ -1,6 +1,6 @@
 CREATE TABLE audit_log (
   id            BIGSERIAL PRIMARY KEY,
-  actor_user_id UUID REFERENCES users(id),
+  actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
   action        TEXT NOT NULL,
   target_table  TEXT NOT NULL,
   target_id     TEXT NOT NULL,
