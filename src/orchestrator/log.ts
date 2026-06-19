@@ -3,7 +3,7 @@ import type { Db } from '../db/client';
 export interface LogEntry {
   method: string;
   source: 'graphql' | 'cron' | 'auth';
-  status: 'ok' | 'error' | 'cache_hit';
+  status: 'ok' | 'error' | 'cache_hit' | 'stale';
   cacheHit: boolean;
   latencyMs?: number;
   args?: unknown;

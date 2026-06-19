@@ -6,6 +6,7 @@ import { buildSascarClient, SascarOrchestrator } from '../orchestrator/SascarOrc
 import { fetchAndUpsertPosicoes } from '../domain/posicoes';
 import { logRequest } from '../orchestrator/log';
 import { loadConfig } from '../config';
+import { runWithConcurrency } from '../lib/concurrency';
 
 export interface JobConfig {
   enabled: boolean;
@@ -32,17 +33,18 @@ export function startSyncPositions(cfg: JobConfig): ScheduledTask | null {
       const orch = new SascarOrchestrator(sascar);
       const pool = new Pool({ connectionString: appCfg.db.url });
       const { rows } = await pool.query('SELECT id_veiculo FROM veiculos_cache');
-      let total = 0;
       const ctx = {
         user: null,
         logger,
         db: { execute: (q: any) => pool.query(q.sql, q.args) } as any,
         orchestrator: orch,
       };
-      for (const v of rows as any[]) {
-        const n = await fetchAndUpsertPosicoes(ctx, v.id_veiculo);
-        total += n;
-      }
+      const totals = await runWithConcurrency(
+        rows as Array<{ id_veiculo: number }>,
+        10,
+        async (v) => fetchAndUpsertPosicoes(ctx, v.id_veiculo),
+      );
+      const total = totals.reduce((acc, n) => acc + n, 0);
       await logRequest(ctx.db, {
         method: 'syncPositions.cron',
         source: 'cron',

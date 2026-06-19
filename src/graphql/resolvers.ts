@@ -31,7 +31,18 @@ export const resolvers = {
       args: { idVeiculo: number; dataInicio: string; dataFim: string },
       ctx: AppContext,
     ) => {
-      await fetchAndUpsertPosicoes(ctx, args.idVeiculo);
+      const { rows: cursorRows } = await ctx.db.execute({
+        sql: `SELECT last_synced_at FROM sync_cursor
+              WHERE method = 'obterPacotePosicaoPorRangeJSON' AND id_veiculo = $1`,
+        args: [args.idVeiculo],
+      });
+      const lastSyncedAt = cursorRows[0]?.last_synced_at as Date | undefined;
+      const cursorFresh =
+        lastSyncedAt &&
+        Date.now() - new Date(lastSyncedAt).getTime() < cfg.cache.posicaoTtlMs;
+      if (!cursorFresh) {
+        await fetchAndUpsertPosicoes(ctx, args.idVeiculo);
+      }
       const { rows } = await ctx.db.execute({
         sql: `SELECT * FROM posicoes WHERE id_veiculo = $1 AND data_posicao BETWEEN $2 AND $3 ORDER BY data_posicao`,
         args: [args.idVeiculo, args.dataInicio, args.dataFim],

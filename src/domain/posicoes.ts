@@ -35,11 +35,26 @@ export async function getPosicoesRecentes(ctx: AppContext, quantity: number): Pr
     });
     return mapPosicoes(fresh);
   }
+  const { rows: stale } = await ctx.db.execute({
+    sql: `SELECT * FROM posicoes ORDER BY data_posicao DESC LIMIT $1`,
+    args: [quantity],
+  });
+  if (stale.length) {
+    triggerBackgroundRefresh(ctx);
+    await logRequest(ctx.db, {
+      method: METHOD,
+      source: 'graphql',
+      status: 'stale',
+      cacheHit: true,
+      latencyMs: Date.now() - start,
+    });
+    return mapPosicoes(stale);
+  }
   const { rows: veiculos } = await ctx.db.execute({
     sql: 'SELECT id_veiculo FROM veiculos_cache',
     args: [],
   });
-  for (const v of veiculos) {
+  for (const v of veiculos as Array<{ id_veiculo: number }>) {
     await fetchAndUpsertPosicoes(ctx, v.id_veiculo);
   }
   const { rows } = await ctx.db.execute({
@@ -54,6 +69,42 @@ export async function getPosicoesRecentes(ctx: AppContext, quantity: number): Pr
     latencyMs: Date.now() - start,
   });
   return mapPosicoes(rows);
+}
+
+const pendingRefreshes = new Set<Promise<void>>();
+
+export function waitForPendingPosicaoRefreshes(): Promise<void> {
+  return Promise.all([...pendingRefreshes]).then(() => undefined);
+}
+
+function triggerBackgroundRefresh(ctx: AppContext): void {
+  const promise = refreshAllPosicoes(ctx)
+    .catch(() => undefined)
+    .finally(() => {
+      pendingRefreshes.delete(promise);
+    });
+  pendingRefreshes.add(promise);
+  setImmediate(() => {
+    void promise;
+  });
+}
+
+async function refreshAllPosicoes(ctx: AppContext): Promise<void> {
+  try {
+    const { rows: veiculos } = await ctx.db.execute({
+      sql: 'SELECT id_veiculo FROM veiculos_cache',
+      args: [],
+    });
+    for (const v of veiculos as Array<{ id_veiculo: number }>) {
+      try {
+        await fetchAndUpsertPosicoes(ctx, v.id_veiculo);
+      } catch {
+        // background refresh — best-effort, do not crash the process
+      }
+    }
+  } catch {
+    // best-effort
+  }
 }
 
 export async function fetchAndUpsertPosicoes(ctx: AppContext, idVeiculo: number): Promise<number> {
