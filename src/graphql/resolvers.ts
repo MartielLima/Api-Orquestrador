@@ -118,6 +118,49 @@ export const resolvers = {
         error: r.error,
       }));
     },
+    auditLog: async (
+      _: unknown,
+      args: {
+        limit?: number;
+        actorUserId?: string;
+        action?: string;
+        targetTable?: string;
+        targetId?: string;
+      },
+      ctx: AppContext,
+    ) => {
+      requireAdmin(ctx);
+      const params: unknown[] = [];
+      const where: string[] = [];
+      const push = (val: unknown): string => {
+        params.push(val);
+        return `$${params.length}`;
+      };
+      if (args.actorUserId) where.push(`actor_user_id = ${push(args.actorUserId)}`);
+      if (args.action) where.push(`action = ${push(args.action)}`);
+      if (args.targetTable) where.push(`target_table = ${push(args.targetTable)}`);
+      if (args.targetId) where.push(`target_id = ${push(args.targetId)}`);
+      params.push(args.limit ?? 100);
+      const { rows } = await ctx.db.execute({
+        sql: `SELECT id, actor_user_id, action, target_table, target_id, diff, host(ip) AS ip, user_agent, created_at
+              FROM audit_log
+              ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+              ORDER BY created_at DESC
+              LIMIT $${params.length}`,
+        args: params,
+      });
+      return (rows as any[]).map((r) => ({
+        id: String(r.id),
+        actorUserId: r.actor_user_id,
+        action: r.action,
+        targetTable: r.target_table,
+        targetId: r.target_id,
+        diff: r.diff,
+        ip: r.ip,
+        userAgent: r.user_agent,
+        createdAt: r.created_at,
+      }));
+    },
   },
   Mutation: {
     ...auth.Mutation,
