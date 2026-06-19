@@ -1,0 +1,236 @@
+{
+  "info": {
+    "name": "Api-Orquestrador — Audit Log",
+    "description": "Testes da feature de audit log contra https://orcapi.martiellima.com/",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://orcapi.martiellima.com/",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "targetUserId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Setup",
+      "item": [
+        {
+          "name": "Login (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.login && json.data.login.accessToken) {",
+                  "  pm.collectionVariables.set('token', json.data.login.accessToken);",
+                  "  console.log('Token salvo em {{token}}');",
+                  "} else {",
+                  "  console.error('Login falhou:', JSON.stringify(json));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"mutation L($e: String!, $p: String!) { login(email: $e, password: $p) { accessToken user { id email role } } }\",\"variables\":{\"e\":\"admin@local.dev\",\"p\":\"admin1234\"}}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Sanity checks",
+      "item": [
+        {
+          "name": "Health (publico)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"{ health }\"}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        },
+        {
+          "name": "auditLog sem token (esperado UNAUTHENTICATED)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"{ auditLog(limit: 1) { id } }\"}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Audit log queries (admin)",
+      "item": [
+        {
+          "name": "auditLog (ultimos 10)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"{ auditLog(limit: 10) { id action targetTable targetId actorUserId ip userAgent createdAt diff } }\"}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        },
+        {
+          "name": "auditLog filtrado por action=user.password_reset",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"{ auditLog(action: \\\"user.password_reset\\\", limit: 20) { targetId actorUserId ip userAgent createdAt } }\"}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        },
+        {
+          "name": "auditLog filtrado por targetId={{targetUserId}}",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"query Q($t: String!) { auditLog(targetId: $t) { action ip userAgent diff createdAt } }\",\"variables\":{\"t\":\"{{targetUserId}}\"}}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Trigger audit entries (com user de teste)",
+      "item": [
+        {
+          "name": "Criar user de teste (grava user.create)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.createUser && json.data.createUser.id) {",
+                  "  pm.collectionVariables.set('targetUserId', json.data.createUser.id);",
+                  "  console.log('targetUserId salvo:', json.data.createUser.id);",
+                  "} else {",
+                  "  console.error('createUser falhou:', JSON.stringify(json));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"mutation C($i: CreateUserInput!) { createUser(input: $i) { id email role active } }\",\"variables\":{\"i\":{\"email\":\"audit-postman-{{$timestamp}}@local.dev\",\"password\":\"PostmanAa1!\",\"role\":\"user\"}}}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        },
+        {
+          "name": "Reset senha do user (grava user.password_reset)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"mutation R($id: ID!, $p: String!) { resetUserPassword(id: $id, newPassword: $p) { id } }\",\"variables\":{\"id\":\"{{targetUserId}}\",\"p\":\"ResetPostmanAa1!\"}}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        },
+        {
+          "name": "Update role do user (grava user.update)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"mutation U($id: ID!, $i: UpdateUserInput!) { updateUser(id: $id, input: $i) { id role active } }\",\"variables\":{\"id\":\"{{targetUserId}}\",\"i\":{\"active\":false}}}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        },
+        {
+          "name": "Verificar 3 entries do user de teste",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"query Q($t: String!) { auditLog(targetId: $t) { action ip userAgent diff createdAt } }\",\"variables\":{\"t\":\"{{targetUserId}}\"}}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        },
+        {
+          "name": "Cleanup: deletar user de teste (grava user.delete)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"mutation D($id: ID!) { deleteUser(id: $id) }\",\"variables\":{\"id\":\"{{targetUserId}}\"}}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}
