@@ -49,10 +49,16 @@ export async function startServer(): Promise<StartedServer> {
     },
   });
   const { url } = await startStandaloneServer(server, {
-    context: async (): Promise<AppContext> => ({
-      ...(await buildContext()),
-      orchestrator,
-    }),
+    context: async ({ req }) => {
+      const xff = req.headers['x-forwarded-for']?.toString().split(',')[0].trim();
+      const ip = xff || req.socket.remoteAddress || null;
+      const userAgent = req.headers['user-agent']?.toString() ?? null;
+      return {
+        ...(await buildContext()),
+        orchestrator,
+        request: { ip, userAgent },
+      };
+    },
     listen: { port: cfg.api.port },
   });
   logger.info({ url }, 'Apollo server started');
