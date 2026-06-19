@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Api-Orquestrador — Audit Log",
-    "description": "Testes da feature de audit log contra https://orcapi.martiellima.com/",
+    "description": "Testes da feature de audit log contra https://orcapi.martiellima.com/.\n\nNOTA: Apollo Server 4+ tem CSRF protection que bloqueia POST sem Content-Type. A collection ja envia os 2 headers necessarios:\n- Content-Type: application/json (parse do body)\n- apollo-require-preflight: true (bypass CSRF)\n\nEndpoint: https://orcapi.martiellima.com/ (raiz) ou /graphql — ambos funcionam com POST.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -46,7 +46,10 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\"query\":\"mutation L($e: String!, $p: String!) { login(email: $e, password: $p) { accessToken user { id email role } } }\",\"variables\":{\"e\":\"admin@local.dev\",\"p\":\"admin1234\"}}"
@@ -63,7 +66,10 @@
           "name": "Health (publico)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\"query\":\"{ health }\"}"
@@ -75,7 +81,10 @@
           "name": "auditLog sem token (esperado UNAUTHENTICATED)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\"query\":\"{ auditLog(limit: 1) { id } }\"}"
@@ -94,6 +103,7 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" },
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "body": {
@@ -109,6 +119,7 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" },
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "body": {
@@ -124,6 +135,7 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" },
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "body": {
@@ -161,6 +173,7 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" },
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "body": {
@@ -176,6 +189,7 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" },
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "body": {
@@ -191,6 +205,7 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" },
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "body": {
@@ -206,6 +221,7 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" },
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "body": {
@@ -221,6 +237,7 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" },
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
             "body": {
