@@ -36,13 +36,8 @@ Criar `tests/tui/api/withRefreshRetry.spec.ts`:
 ```ts
 import { withRefreshRetry, SessionExpiredError } from '../../../src/tui/api/withRefreshRetry';
 
-function unauthError(): Error {
-  return new Error('GraphQL error: "code":"UNAUTHENTICATED"');
-}
-
-function networkError(): Error {
-  return new Error('ECONNREFUSED');
-}
+const unauthError = new Error('GraphQL error: "code":"UNAUTHENTICATED"');
+const networkError = new Error('ECONNREFUSED');
 
 const isAuthError = (err: unknown): boolean =>
   err instanceof Error && /UNAUTHENTICATED/.test(err.message);
@@ -62,7 +57,7 @@ describe('withRefreshRetry', () => {
   it('re-tenta após UNAUTHENTICATED e chama refresh uma vez', async () => {
     const doRequest = jest
       .fn()
-      .mockRejectedValueOnce(unauthError())
+      .mockRejectedValueOnce(unauthError)
       .mockResolvedValueOnce({ data: 'ok-after-refresh' });
     const refresh = jest.fn().mockResolvedValue('new-token');
 
@@ -74,40 +69,35 @@ describe('withRefreshRetry', () => {
   });
 
   it('não chama refresh em erro não-auth (rede)', async () => {
-    const doRequest = jest.fn().mockRejectedValue(networkError());
+    const doRequest = jest.fn().mockRejectedValue(networkError);
     const refresh = jest.fn();
 
-    await expect(withRefreshRetry(doRequest, refresh, isAuthError)).rejects.toBe(networkError());
+    await expect(withRefreshRetry(doRequest, refresh, isAuthError)).rejects.toBe(networkError);
     expect(doRequest).toHaveBeenCalledTimes(1);
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  it('dedup: 5 chamadas concorrentes disparam refresh apenas uma vez', async () => {
-    let resolveRefresh!: (token: string) => void;
-    const refresh = jest.fn().mockImplementation(
-      () => new Promise<string>((resolve) => { resolveRefresh = resolve; }),
-    );
-    const doRequest = jest.fn().mockImplementation(async () => {
-      if (doRequest.mock.calls.length === 1) throw unauthError();
-      return { data: 'ok' };
+  it('cada invocação paralela chama refresh uma vez (dedup é do caller)', async () => {
+    let calls = 0;
+    const sharedRefresh = jest.fn().mockImplementation(async () => {
+      calls += 1;
+      return `token-${calls}`;
     });
+    const doRequest = jest.fn().mockRejectedValue(unauthError);
 
-    const promises = Array.from({ length: 5 }, () =>
-      withRefreshRetry(doRequest, refresh, isAuthError),
-    );
+    await expect(
+      Promise.all([
+        withRefreshRetry(doRequest, sharedRefresh, isAuthError),
+        withRefreshRetry(doRequest, sharedRefresh, isAuthError),
+      ]),
+    ).rejects.toBeInstanceOf(Error);
 
-    await new Promise((r) => setImmediate(r));
-    expect(refresh).toHaveBeenCalledTimes(1);
-
-    resolveRefresh('new-token');
-    const results = await Promise.all(promises);
-
-    expect(results).toEqual(Array(5).fill({ data: 'ok' }));
-    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(sharedRefresh).toHaveBeenCalledTimes(2);
+    expect(doRequest).toHaveBeenCalledTimes(4);
   });
 
   it('lança SessionExpiredError quando refresh falha, sem re-tentar', async () => {
-    const doRequest = jest.fn().mockRejectedValue(unauthError());
+    const doRequest = jest.fn().mockRejectedValue(unauthError);
     const refresh = jest.fn().mockRejectedValue(new SessionExpiredError('refresh failed'));
 
     await expect(withRefreshRetry(doRequest, refresh, isAuthError)).rejects.toBeInstanceOf(
@@ -117,6 +107,8 @@ describe('withRefreshRetry', () => {
   });
 });
 ```
+
+**Nota sobre o teste de dedup:** `doRequest` é chamado 4× (e `refresh` 2×) porque cada invocação paralela de `withRefreshRetry` faz sua própria sequência `doRequest` → falhar → `refresh` → `doRequest` retry → falhar. O teste verifica explicitamente que a função pura **não dedupa sozinha** — a deduplicação real é garantida pelo `inFlightRefresh` em closure no `bootstrap.ts`, exercitada em Task 2.
 
 ### Step 1.2: Rodar testes para confirmar falha
 
@@ -153,35 +145,7 @@ export async function withRefreshRetry<T>(
 }
 ```
 
-**Nota sobre dedup:** o `refresh` passado pelo caller (`bootstrap.ts`) será responsável pelo dedup via `inFlightRefresh` em closure. `withRefreshRetry` em si é puro — ela sempre chama `refresh()` quando há auth error. O teste de dedup (Step 1.4 do plano mental) testa o caller, não a função pura. Ajustar o teste 4:
-
-Substituir no `withRefreshRetry.spec.ts`:
-
-```ts
-  it('dedup é responsabilidade do caller: o mesmo refresh callable é passado', async () => {
-    let calls = 0;
-    const sharedRefresh = jest.fn().mockImplementation(async () => {
-      calls += 1;
-      await new Promise((r) => setTimeout(r, 10));
-      return `token-${calls}`;
-    });
-    const doRequest = jest.fn().mockImplementation(async () => {
-      throw unauthError();
-    });
-
-    await expect(
-      Promise.all([
-        withRefreshRetry(doRequest, sharedRefresh, isAuthError),
-        withRefreshRetry(doRequest, sharedRefresh, isAuthError),
-      ]),
-    ).rejects.toBeInstanceOf(Error);
-
-    expect(sharedRefresh).toHaveBeenCalledTimes(2);
-    expect(doRequest).toHaveBeenCalledTimes(2);
-  });
-```
-
-(Refresh callable sem dedup chama 2x — comportamento esperado da função pura. Dedup real é garantido pelo `inFlightRefresh` no `bootstrap.ts`, testado na Task 2.)
+**Nota sobre dedup:** o `refresh` passado pelo caller (`bootstrap.ts`) será responsável pelo dedup via `inFlightRefresh` em closure. `withRefreshRetry` em si é puro — ela sempre chama `refresh()` quando há auth error. O teste 4 verifica explicitamente que a função pura **não dedupa sozinha** — a deduplicação real é garantida pelo `inFlightRefresh` em closure no `bootstrap.ts`, exercitada em Task 2.
 
 ### Step 1.4: Rodar testes e verificar que passam
 

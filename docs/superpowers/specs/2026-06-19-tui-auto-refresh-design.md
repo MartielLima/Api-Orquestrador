@@ -46,13 +46,13 @@ export async function withRefreshRetry<T>(
     return await doRequest();
   } catch (err) {
     if (!isAuthError(err)) throw err;
-    const newToken = await refresh(); // dedup interno
-    return doRequest(); // re-tenta; doRequest lê o token novo via closure
+    await refresh(); // refresh atualiza token via closure; doRequest lê o token novo na próxima chamada
+    return doRequest();
   }
 }
 ```
 
-`doRequest` é sem parâmetros porque lê o token atual via closure (definido no `bootstrap.ts`). `withRefreshRetry` não conhece `ApiClient` nem tokens — só orquestra a sequência tentar → falhar auth → refresh → re-tentar. O `refresh` faz dedup de chamadas concorrentes usando `let inFlight: Promise<string> | null = null` também via closure.
+`doRequest` é sem parâmetros porque lê o token atual via closure (definido no `bootstrap.ts`). `withRefreshRetry` não conhece `ApiClient` nem tokens — só orquestra a sequência tentar → falhar auth → refresh → re-tentar. O **dedup de chamadas concorrentes** é responsabilidade do `refresh` passado pelo caller (no `bootstrap.ts`, via `let inFlightRefresh: Promise<string> | null = null`).
 
 ### Refator em `src/tui/api/bootstrap.ts`
 
@@ -176,7 +176,7 @@ clearSession já foi chamado dentro do refresh handler
 1. **sucesso de primeira** — `doRequest` resolve, `refresh` não é chamado.
 2. **retry após auth error** — primeira chamada lança erro com `UNAUTHENTICATED`, `refresh` resolve, segunda chamada resolve.
 3. **não-retenta em erro não-auth** — `doRequest` lança `NetworkError`, propaga sem chamar `refresh`.
-4. **dedup concorrente** — 5 chamadas `withRefreshRetry` em paralelo com auth error → `refresh` chamado **exatamente 1 vez**; todas as 5 resolvem.
+4. **dedup é do caller** — 2 chamadas `withRefreshRefresh` em paralelo com auth error → `refresh` chamado **2 vezes** (a função pura não dedupa); cada invocação chama `doRequest` 2× (1 falha + 1 retry que também falha). O **dedup real** (concorrência reduzida para 1 chamada) é garantido pelo `inFlightRefresh` em closure no `bootstrap.ts`, exercitado em teste de integração.
 5. **refresh falhando** — `refresh` lança `SessionExpiredError`; `withRefreshRetry` propaga; `doRequest` chamado apenas 1 vez (não re-tenta).
 
 Adicionalmente, ajuste em `tests/auth/authPlugin.spec.ts` se necessário — provavelmente não, pois o servidor não muda.
