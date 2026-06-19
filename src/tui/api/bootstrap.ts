@@ -97,8 +97,8 @@ function buildAuthAwareApi(
   getSession: () => PersistedSession | null,
   setSession: (s: PersistedSession | null) => void,
 ): { request: <T>(doc: RequestDocument, vars?: Variables) => Promise<T> } {
-  let currentAccessToken: string | null = getSession()?.accessToken ?? null;
-  if (currentAccessToken) rawApi.setAuthToken(currentAccessToken);
+  const initialToken = getSession()?.accessToken ?? null;
+  if (initialToken) rawApi.setAuthToken(initialToken);
 
   let inFlightRefresh: Promise<string> | null = null;
 
@@ -126,14 +126,13 @@ function buildAuthAwareApi(
           console.warn('failed to persist refreshed session:', e);
         }
         setSession(next);
-        currentAccessToken = next.accessToken;
         rawApi.setAuthToken(next.accessToken);
         process.env.TUI_API_TOKEN = next.accessToken;
         return next.accessToken;
       } catch (e) {
         clearSession();
         setSession(null);
-        currentAccessToken = null;
+        rawApi.setAuthToken(null);
         throw new SessionExpiredError(
           'refresh failed: ' + (e instanceof Error ? e.message : String(e)),
         );
