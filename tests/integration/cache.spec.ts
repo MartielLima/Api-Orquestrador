@@ -108,4 +108,32 @@ describe('cachedQuery', () => {
     expect(stored[0].is_valid).toBe(true);
     await pool.end();
   });
+
+  it('bypassCache ignora o cache e retorna o resultado do fetcher sem inserir', async () => {
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    // Row stale no cache nao deve ser retornado quando bypassCache=true.
+    await pool.query(
+      `INSERT INTO ${table} (id, nome, raw, fetched_at, expires_at)
+       VALUES (7, 'Cached', '{}'::jsonb, now(), now() + interval '1 hour')`,
+    );
+
+    const db = { execute: (q: any) => pool.query(q.sql, q.args) } as any;
+    const result = await cachedQuery<{ id: number; nome: string }>(
+      db,
+      {
+        table,
+        primaryKey: 'id',
+        ttlMs: 60_000,
+        fetcher: async () => [{ id: 7, nome: 'FreshFiltered', raw: {} } as any],
+        fromRows: (rows: any[]) => rows.map((r) => ({ id: r.id, nome: r.nome })),
+      },
+      { bypassCache: true },
+    );
+    expect(result.length).toBe(1);
+    expect(result[0].nome).toBe('FreshFiltered');
+
+    const { rows } = await pool.query(`SELECT nome FROM ${table} WHERE id = 7`);
+    expect(rows[0].nome).toBe('Cached');
+    await pool.end();
+  });
 });

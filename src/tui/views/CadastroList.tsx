@@ -8,6 +8,7 @@ import { useApi } from '../hooks/useApi';
 import { useInterval } from '../hooks/useInterval';
 import { useToast } from '../hooks/useToast';
 import { formatDate, formatRelative } from '../lib/format';
+import { formatGraphQLError } from '../lib/formatError';
 import { Q_CLIENTES, Q_VEICULOS, Q_MOTORISTAS } from '../api/queries';
 
 export type CadastroQuery =
@@ -70,8 +71,9 @@ export function CadastroList({ title, query, columns, pollMs = 60_000, emptyMess
       setRows(data[QUERY_KEY[query.kind]] ?? []);
       setLastSync(new Date());
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      toast.error(`erro: ${e instanceof Error ? e.message : String(e)}`);
+      const msg = formatGraphQLError(e);
+      setError(msg);
+      toast.error(`erro: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -106,6 +108,15 @@ export function CadastroList({ title, query, columns, pollMs = 60_000, emptyMess
     }
   });
 
+  const tableData = React.useMemo(
+    () => rows.map((r, i) => {
+      const out: Record<string, string> = { marker: i === selected ? '▸' : ' ' };
+      for (const c of columns) out[c.key] = c.render(r);
+      return out;
+    }),
+    [rows, selected, columns],
+  );
+
   if (loading && rows.length === 0) {
     return (
       <Box flexDirection="column" flexGrow={1}>
@@ -124,15 +135,6 @@ export function CadastroList({ title, query, columns, pollMs = 60_000, emptyMess
     );
   }
 
-  const tableData = React.useMemo(
-    () => rows.map((r, i) => {
-      const out: Record<string, string> = { marker: i === selected ? '▸' : ' ' };
-      for (const c of columns) out[c.key] = c.render(r);
-      return out;
-    }),
-    [rows, selected, columns],
-  );
-
   return (
     <Box flexDirection="column" flexGrow={1}>
       <Box marginBottom={1} justifyContent="space-between">
@@ -145,7 +147,7 @@ export function CadastroList({ title, query, columns, pollMs = 60_000, emptyMess
       {filterMode ? (
         <Box marginBottom={1}>
           <Text color="yellow">filtro {query.idField}: </Text>
-          <Field label="" value={filterInput} onChange={setFilterInput} onSubmit={() => { setFilterValue(filterInput.trim()); setFilterMode(false); }} />
+          <Field label="" value={filterInput} onChange={setFilterInput} onSubmit={() => { setFilterValue(filterInput.trim()); setFilterMode(false); }} focus />
           <Text dimColor>  [Enter] aplicar · [Esc] cancelar</Text>
         </Box>
       ) : null}

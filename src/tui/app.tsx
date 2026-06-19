@@ -7,6 +7,7 @@ import { Footer } from './components/Footer';
 import { StatusBar } from './components/StatusBar';
 import { HelpOverlay } from './components/HelpOverlay';
 import { ApiProvider, type ApiContext } from './hooks/useApi';
+import { useTextInputFocused } from './hooks/useInputFocus';
 import type { BootstrapResult } from './api/bootstrap';
 import { UsersView } from './views/Users';
 import { ClientesView } from './views/Clientes';
@@ -24,7 +25,7 @@ interface NavDef {
 }
 
 const NAV: NavDef[] = [
-  { key: 'users',     label: '1 Usuários',  render: () => <UsersView />,     hints: [{ key: 'n', label: 'novo' }, { key: 'e', label: 'editar' }, { key: 'a', label: 'ativar' }, { key: 'p', label: 'senha' }, { key: 't', label: 'tokens' }, { key: 'r', label: 'refresh' }] },
+  { key: 'users',     label: '1 Usuários',  render: () => <UsersView />,     hints: [{ key: 'n', label: 'novo' }, { key: 'e', label: 'editar' }, { key: 'a', label: 'ativar' }, { key: 'd', label: 'remover' }, { key: 'p', label: 'senha' }, { key: 't', label: 'tokens' }, { key: 'r', label: 'refresh' }] },
   { key: 'clientes',  label: '2 Clientes',  render: () => <ClientesView />,  hints: [{ key: 'f', label: 'filtrar' }, { key: 'r', label: 'refresh' }] },
   { key: 'veiculos',  label: '3 Veículos',  render: () => <VeiculosView />,  hints: [{ key: 'f', label: 'filtrar' }, { key: 'r', label: 'refresh' }] },
   { key: 'motoristas',label: '4 Motoristas',render: () => <MotoristasView />,hints: [{ key: 'f', label: 'filtrar' }, { key: 'r', label: 'refresh' }] },
@@ -52,6 +53,7 @@ function ErrorScreen({ message, hint }: { message: string; hint?: string }): Rea
 
 function TuiApp({ api, user, apiUrl, tokenExp }: ApiContext & { tokenExp: number }): React.ReactElement {
   const { exit } = useApp();
+  const textInputFocused = useTextInputFocused();
   const [viewKey, setViewKey] = useState<string>('users');
   const [showHeader, setShowHeader] = useState<boolean>(true);
   const [showHelp, setShowHelp] = useState<boolean>(false);
@@ -65,6 +67,7 @@ function TuiApp({ api, user, apiUrl, tokenExp }: ApiContext & { tokenExp: number
     if (input === 'H') { setShowHeader((h) => !h); return; }
     if (input === 'q' && !key.ctrl) { exit(); return; }
     if (key.ctrl && input === 'c') { exit(); return; }
+    if (textInputFocused) return;
     if (key.tab) {
       const idx = NAV.findIndex((n) => n.key === viewKey);
       const next = NAV[(idx + 1) % NAV.length];

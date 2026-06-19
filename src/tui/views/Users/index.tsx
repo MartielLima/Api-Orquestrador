@@ -8,7 +8,8 @@ import { useApi } from '../../hooks/useApi';
 import { useInterval } from '../../hooks/useInterval';
 import { useToast } from '../../hooks/useToast';
 import { formatRelative } from '../../lib/format';
-import { Q_USERS, M_CREATE_USER, M_UPDATE_USER, M_RESET_PASSWORD, M_REVOKE_TOKEN, Q_REFRESH_TOKENS } from '../../api/queries';
+import { formatGraphQLError } from '../../lib/formatError';
+import { Q_USERS, M_CREATE_USER, M_UPDATE_USER, M_RESET_PASSWORD, M_REVOKE_TOKEN, Q_REFRESH_TOKENS, M_DELETE_USER } from '../../api/queries';
 import { CreateForm } from './CreateForm';
 import { EditForm } from './EditForm';
 import { ResetPassword } from './ResetPassword';
@@ -29,7 +30,7 @@ export function UsersView(): React.ReactElement {
   const [sortKey, setSortKey] = useState<SortKey>('createdAt');
   const [sortAsc, setSortAsc] = useState<boolean>(false);
   const [modal, setModal] = useState<Modal>(null);
-  const [confirm, setConfirm] = useState<{ kind: 'toggleActive'; user: UserRow } | null>(null);
+  const [confirm, setConfirm] = useState<{ kind: 'toggleActive' | 'deleteUser'; user: UserRow } | null>(null);
   const [tokens, setTokens] = useState<RefreshTokenRow[]>([]);
   const [tokensLoading, setTokensLoading] = useState<boolean>(false);
   const [detail, setDetail] = useState<UserRow | null>(null);
@@ -57,7 +58,7 @@ export function UsersView(): React.ReactElement {
       const data = await api.request<{ refreshTokens: RefreshTokenRow[] }>(Q_REFRESH_TOKENS, { userId });
       setTokens(data.refreshTokens);
     } catch (e) {
-      toast.error(`erro ao listar tokens: ${e instanceof Error ? e.message : String(e)}`);
+      toast.error(`erro ao listar tokens: ${formatGraphQLError(e)}`);
     } finally {
       setTokensLoading(false);
     }
@@ -85,6 +86,15 @@ export function UsersView(): React.ReactElement {
       return;
     }
     if (input === 'p') { setModal('reset'); return; }
+    if (input === 'd') {
+      if (!selectedUser) return;
+      if (selectedUser.id === currentUser.id) {
+        toast.error('você não pode remover a si mesmo');
+        return;
+      }
+      setConfirm({ kind: 'deleteUser', user: selectedUser });
+      return;
+    }
     if (input === 't') {
       setModal('tokens');
       void refreshTokens(selectedUser.id);
@@ -147,7 +157,7 @@ export function UsersView(): React.ReactElement {
       toast.success(`${u.email} agora está ${nextActive ? 'ativo' : 'inativo'}`);
       await loadUsers();
     } catch (e) {
-      toast.error(`erro: ${e instanceof Error ? e.message : String(e)}`);
+      toast.error(`erro: ${formatGraphQLError(e)}`);
     } finally {
       setConfirm(null);
     }
@@ -159,7 +169,21 @@ export function UsersView(): React.ReactElement {
       toast.success('token revogado');
       if (selectedUser) await refreshTokens(selectedUser.id);
     } catch (e) {
-      toast.error(`erro: ${e instanceof Error ? e.message : String(e)}`);
+      toast.error(`erro: ${formatGraphQLError(e)}`);
+    }
+  };
+
+  const handleDeleteConfirm = async (): Promise<void> => {
+    if (!confirm || confirm.kind !== 'deleteUser') return;
+    const u = confirm.user;
+    try {
+      await api.request(M_DELETE_USER, { id: u.id });
+      toast.success(`usuário ${u.email} removido`);
+      await loadUsers();
+    } catch (e) {
+      toast.error(`erro: ${formatGraphQLError(e)}`);
+    } finally {
+      setConfirm(null);
     }
   };
 
@@ -227,6 +251,13 @@ export function UsersView(): React.ReactElement {
         <Confirm
           message={`${confirm.user.active ? 'Desativar' : 'Ativar'} ${confirm.user.email}? ${confirm.user.active ? 'Ele não conseguirá mais logar.' : 'Ele voltará a poder logar.'}`}
           onConfirm={() => { void handleToggleActiveConfirm(); }}
+          onCancel={() => setConfirm(null)}
+        />
+      ) : null}
+      {confirm?.kind === 'deleteUser' ? (
+        <Confirm
+          message={`Remover ${confirm.user.email}? Os refresh tokens deste usuário também serão removidos. Esta ação não pode ser desfeita.`}
+          onConfirm={() => { void handleDeleteConfirm(); }}
           onCancel={() => setConfirm(null)}
         />
       ) : null}

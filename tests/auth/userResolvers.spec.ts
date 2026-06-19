@@ -254,3 +254,52 @@ describe('userResolvers.Mutation.revokeRefreshToken', () => {
     expect(r).toBe(true);
   });
 });
+
+describe('userResolvers.Mutation.deleteUser', () => {
+  it('deletes the target user and their refresh tokens when admin', async () => {
+    const admin = await seedUser('admin', 'du-admin');
+    const target = await seedUser('user', 'du-target');
+    const pool = new Pool({ connectionString: cfg.db.url });
+    await pool.query(
+      `INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
+      [target.id, 'test-hash-' + Date.now(), new Date(Date.now() + 86_400_000)],
+    );
+    await pool.end();
+
+    const ok = (await callMutation('deleteUser', { id: target.id }, admin)) as boolean;
+    expect(ok).toBe(true);
+
+    const verifyPool = new Pool({ connectionString: cfg.db.url });
+    const { rows: userRows } = await verifyPool.query('SELECT id FROM users WHERE id = $1', [target.id]);
+    const { rows: tokenRows } = await verifyPool.query(
+      'SELECT id FROM refresh_tokens WHERE user_id = $1',
+      [target.id],
+    );
+    await verifyPool.end();
+    expect(userRows.length).toBe(0);
+    expect(tokenRows.length).toBe(0);
+  });
+
+  it('rejects self-delete', async () => {
+    const admin = await seedUser('admin', 'du-self');
+    const r = (await callMutation('deleteUser', { id: admin.id }, admin)) as { __error: Error };
+    expect(r.__error.message).toMatch(/cannot delete yourself/i);
+  });
+
+  it('throws USER_NOT_FOUND on missing id', async () => {
+    const admin = await seedUser('admin', 'du-missing');
+    const r = (await callMutation(
+      'deleteUser',
+      { id: '00000000-0000-0000-0000-000000000000' },
+      admin,
+    )) as { __error: Error };
+    expect(r.__error.message).toMatch(/user not found/i);
+  });
+
+  it('rejects non-admin with FORBIDDEN', async () => {
+    const u = await seedUser('user', 'du-na');
+    const target = await seedUser('user', 'du-na-target');
+    const r = (await callMutation('deleteUser', { id: target.id }, u)) as { __error: Error };
+    expect(r.__error.message).toMatch(/Admin role required/);
+  });
+});

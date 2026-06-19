@@ -174,5 +174,26 @@ export const userResolvers = {
       });
       return (rows as unknown[]).length > 0;
     },
+
+    deleteUser: async (_: unknown, args: { id: string }, ctx: AppContext) => {
+      const me = requireAdmin(ctx);
+      if (args.id === me.id) {
+        throw new UserError(UserErrorCode.CANNOT_DEACTIVATE_SELF, 'cannot delete yourself');
+      }
+      const { rows: existing } = await ctx.db.execute({
+        sql: 'SELECT id FROM users WHERE id = $1',
+        args: [args.id],
+      });
+      if (!existing[0]) throw new UserError(UserErrorCode.USER_NOT_FOUND, 'user not found');
+      await ctx.db.execute({
+        sql: 'DELETE FROM refresh_tokens WHERE user_id = $1',
+        args: [args.id],
+      });
+      const { rows } = await ctx.db.execute({
+        sql: 'DELETE FROM users WHERE id = $1 RETURNING id',
+        args: [args.id],
+      });
+      return (rows as unknown[]).length > 0;
+    },
   },
 };

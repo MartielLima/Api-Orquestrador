@@ -89,6 +89,7 @@ export function CreateForm({ onSubmit, onCancel }: CreateFormProps): React.React
           onChange={setEmail}
           onSubmit={() => setFocused('password')}
           placeholder="user@dominio.dev"
+          focus={focused === 'email'}
         />
         <Field
           label="Senha"
@@ -96,6 +97,7 @@ export function CreateForm({ onSubmit, onCancel }: CreateFormProps): React.React
           onChange={setPassword}
           onSubmit={() => setFocused('confirm')}
           password
+          focus={focused === 'password'}
         />
         <Box marginLeft={2} marginBottom={1}>
           <Text color={strengthColor}>[{strengthBar}] {strength.label}</Text>
@@ -106,6 +108,7 @@ export function CreateForm({ onSubmit, onCancel }: CreateFormProps): React.React
           onChange={setConfirm}
           onSubmit={() => setFocused('role')}
           password
+          focus={focused === 'confirm'}
         />
         <Box marginBottom={1}>
           <Text>

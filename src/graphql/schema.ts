@@ -175,6 +175,7 @@ export const typeDefs = gql`
     refresh(refreshToken: String!): AuthPayload!
     createUser(input: CreateUserInput!): User!
     updateUser(id: ID!, input: UpdateUserInput!): User!
+    deleteUser(id: ID!): Boolean!
     resetUserPassword(id: ID!, newPassword: String!): User!
     revokeRefreshToken(id: ID!): Boolean!
   }

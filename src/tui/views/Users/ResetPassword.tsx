@@ -105,6 +105,7 @@ export function ResetPassword({ user, onSubmit, onCancel, onDone }: ResetPasswor
             onChange={setManual}
             password
             placeholder="8+ chars, maiúscula, minúscula, dígito"
+            focus
           />
         )}
         {error ? <Box marginBottom={1}><Text color="red">✗ {error}</Text></Box> : null}

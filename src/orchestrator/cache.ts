@@ -17,30 +17,46 @@ export interface CachedQueryOpts<T, TRow> {
 export async function cachedQuery<T, TRow = any>(
   db: Db,
   opts: CachedQueryOpts<T, TRow>,
+  opts2?: { bypassCache?: boolean },
 ): Promise<T[]> {
   const start = Date.now();
   const method = opts.method ?? 'unknown';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const toRow: (item: T) => TRow = opts.toRow ?? ((item: any) => item as unknown as TRow);
-  const { rows: cached } = await db.execute({
-    sql: `SELECT * FROM ${opts.table} WHERE expires_at > now()`,
-    args: [],
-  });
 
-  if (cached.length) {
-    await logRequest(db, {
-      method,
-      source: 'graphql',
-      status: 'cache_hit',
-      cacheHit: true,
-      latencyMs: Date.now() - start,
+  if (!opts2?.bypassCache) {
+    const { rows: cached } = await db.execute({
+      sql: `SELECT * FROM ${opts.table} WHERE expires_at > now()`,
+      args: [],
     });
-    return opts.fromRows(cached);
+
+    if (cached.length) {
+      await logRequest(db, {
+        method,
+        source: 'graphql',
+        status: 'cache_hit',
+        cacheHit: true,
+        latencyMs: Date.now() - start,
+      });
+      return opts.fromRows(cached);
+    }
   }
 
   const fresh = await opts.fetcher().catch((err) => {
     throw mapSascarError(err);
   });
+
+  if (opts2?.bypassCache) {
+    await logRequest(db, {
+      method,
+      source: 'graphql',
+      status: 'ok',
+      cacheHit: false,
+      latencyMs: Date.now() - start,
+    });
+    return fresh;
+  }
+
   const expiresAt = new Date(Date.now() + opts.ttlMs);
   for (const item of fresh) {
     const row = toRow(item);

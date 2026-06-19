@@ -100,6 +100,12 @@ export const M_RESET_PASSWORD = gql`
   }
 `;
 
+export const M_DELETE_USER = gql`
+  mutation DeleteUser($id: ID!) {
+    deleteUser(id: $id)
+  }
+`;
+
 export const M_REVOKE_TOKEN = gql`
   mutation RevokeRefreshToken($id: ID!) {
     revokeRefreshToken(id: $id)
