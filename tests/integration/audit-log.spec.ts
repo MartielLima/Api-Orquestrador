@@ -311,4 +311,87 @@ describe('audit_log', () => {
       expect(entries[0].user_agent).toBe('integration-test/1.0');
     });
   });
+
+  describe('auditLog query auth', () => {
+    it('sem token retorna UNAUTHENTICATED', async () => {
+      const { executeOperation } = await buildServerAs(null);
+      const res = await executeOperation({ query: '{ auditLog(limit: 1) { id } }' });
+      expect(codeFromError(res.body.singleResult)).toBe('UNAUTHENTICATED');
+    });
+
+    it('user não-admin retorna FORBIDDEN', async () => {
+      const { nonAdmin } = await seedAdminAndUser();
+      const nonAdminAuth: AuthUser = { id: nonAdmin.id, email: nonAdmin.email, role: 'user' };
+      const { executeOperation } = await buildServerAs(nonAdminAuth);
+      const res = await executeOperation({ query: '{ auditLog(limit: 1) { id } }' });
+      expect(codeFromError(res.body.singleResult)).toBe('FORBIDDEN');
+    });
+
+    it('admin recebe entries ordenadas por created_at DESC', async () => {
+      const { admin, nonAdmin } = await seedAdminAndUser();
+      const { executeOperation } = await buildServerAs(admin);
+
+      await executeOperation({
+        query: `mutation C($i: CreateUserInput!) { createUser(input: $i) { id } }`,
+        variables: { i: { email: `q1-${Date.now()}@local.dev`, password: 'Aa1!aaaa', role: 'user' } },
+      });
+      await executeOperation({
+        query: `mutation R($id: ID!, $p: String!) { resetUserPassword(id: $id, newPassword: $p) { id } }`,
+        variables: { id: nonAdmin.id, p: 'QueryAa1!aaaa' },
+      });
+
+      const res = await executeOperation({
+        query: '{ auditLog(limit: 10) { id action targetId diff createdAt } }',
+      });
+      const rows = (res.body.singleResult.data as { auditLog: any[] }).auditLog;
+      expect(rows.length).toBeGreaterThanOrEqual(2);
+      const actions = rows.map((r) => r.action);
+      expect(actions).toContain('user.password_reset');
+      expect(actions).toContain('user.create');
+
+      const ts = rows.map((r) => new Date(r.createdAt as string).getTime());
+      for (let k = 1; k < ts.length; k += 1) {
+        expect(ts[k - 1]).toBeGreaterThanOrEqual(ts[k]);
+      }
+    });
+
+    it('filtro targetId retorna só entries daquele target', async () => {
+      const { admin, nonAdmin } = await seedAdminAndUser();
+      const { executeOperation } = await buildServerAs(admin);
+
+      await executeOperation({
+        query: `mutation R($id: ID!, $p: String!) { resetUserPassword(id: $id, newPassword: $p) { id } }`,
+        variables: { id: nonAdmin.id, p: 'FiltAa1!aaaa' },
+      });
+      await executeOperation({
+        query: `mutation U($id: ID!, $i: UpdateUserInput!) { updateUser(id: $id, input: $i) { id } }`,
+        variables: { id: nonAdmin.id, i: { active: false } },
+      });
+
+      const res = await executeOperation({
+        query: `query Q($t: String!) { auditLog(targetId: $t) { action } }`,
+        variables: { t: nonAdmin.id },
+      });
+      const rows = (res.body.singleResult.data as { auditLog: any[] }).auditLog;
+      expect(rows.length).toBe(2);
+      const actions = rows.map((r) => r.action).sort();
+      expect(actions).toEqual(['user.password_reset', 'user.update']);
+    });
+
+    it('filtro action retorna só entries daquela action', async () => {
+      const { admin } = await seedAdminAndUser();
+      const { executeOperation } = await buildServerAs(admin);
+      await executeOperation({
+        query: `mutation C($i: CreateUserInput!) { createUser(input: $i) { id } }`,
+        variables: { i: { email: `q2-${Date.now()}@local.dev`, password: 'Aa1!aaaa', role: 'user' } },
+      });
+
+      const res = await executeOperation({
+        query: '{ auditLog(action: "user.create") { action } }',
+      });
+      const rows = (res.body.singleResult.data as { auditLog: any[] }).auditLog;
+      expect(rows.length).toBeGreaterThanOrEqual(1);
+      expect(rows.every((r) => r.action === 'user.create')).toBe(true);
+    });
+  });
 });
