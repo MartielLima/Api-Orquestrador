@@ -95,13 +95,27 @@ export function UsersView(): React.ReactElement {
     if (key.return && selectedUser) { setDetail(selectedUser); return; }
   });
 
-  const sortedUsers = [...users].sort((a, b) => {
-    const av = a[sortKey] ?? '';
-    const bv = b[sortKey] ?? '';
-    if (av < bv) return sortAsc ? -1 : 1;
-    if (av > bv) return sortAsc ? 1 : -1;
-    return 0;
-  });
+  const sortedUsers = React.useMemo(
+    () => [...users].sort((a, b) => {
+      const av = a[sortKey] ?? '';
+      const bv = b[sortKey] ?? '';
+      if (av < bv) return sortAsc ? -1 : 1;
+      if (av > bv) return sortAsc ? 1 : -1;
+      return 0;
+    }),
+    [users, sortKey, sortAsc],
+  );
+
+  const tableData = React.useMemo(
+    () => sortedUsers.map((u, i) => ({
+      marker: i === selected ? '▸' : ' ',
+      email: u.email,
+      role: u.role,
+      active: u.active ? 'ON' : 'OFF',
+      criado: formatRelative(u.createdAt),
+    })),
+    [sortedUsers, selected],
+  );
 
   const handleCreate = async (input: { email: string; password: string; role: 'admin' | 'user' }): Promise<void> => {
     await api.request(M_CREATE_USER, { input });
@@ -179,15 +193,7 @@ export function UsersView(): React.ReactElement {
       {users.length === 0 ? (
         <Text dimColor>nenhum usuário — pressione [n] para criar</Text>
       ) : (
-        <Table
-          data={sortedUsers.map((u, i) => ({
-            marker: i === selected ? '▸' : ' ',
-            email: u.email,
-            role: u.role,
-            active: u.active ? 'ON' : 'OFF',
-            criado: formatRelative(u.createdAt),
-          }))}
-        />
+        <Table data={tableData} />
       )}
       {modal === 'create' ? (
         <CreateForm onSubmit={handleCreate} onCancel={() => setModal(null)} />

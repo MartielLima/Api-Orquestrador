@@ -10,7 +10,7 @@ function padRight(s: string, w: number): string {
   return s + ' '.repeat(Math.max(0, w - s.length));
 }
 
-export function Table<T extends ScalarDict>({ data }: Props<T>): React.ReactElement {
+function TableImpl<T extends ScalarDict>({ data }: Props<T>): React.ReactElement {
   if (data.length === 0) {
     return (
       <Box>
@@ -48,3 +48,5 @@ export function Table<T extends ScalarDict>({ data }: Props<T>): React.ReactElem
     </Box>
   );
 }
+
+export const Table = React.memo(TableImpl) as typeof TableImpl;

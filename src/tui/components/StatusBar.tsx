@@ -28,7 +28,7 @@ export function StatusBar({ user, apiUrl, tokenExp }: Props): React.ReactElement
   const [health, setHealth] = useState<Health>('unknown');
   const [now, setNow] = useState(() => new Date());
 
-  useInterval(() => setNow(new Date()), 1000);
+  useInterval(() => setNow(new Date()), 5000);
   useInterval(() => {
     const api = buildApiClient(apiUrl);
     api.request<{ health: string }>(Q_HEALTH)

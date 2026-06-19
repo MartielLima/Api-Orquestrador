@@ -124,6 +124,15 @@ export function CadastroList({ title, query, columns, pollMs = 60_000, emptyMess
     );
   }
 
+  const tableData = React.useMemo(
+    () => rows.map((r, i) => {
+      const out: Record<string, string> = { marker: i === selected ? '▸' : ' ' };
+      for (const c of columns) out[c.key] = c.render(r);
+      return out;
+    }),
+    [rows, selected, columns],
+  );
+
   return (
     <Box flexDirection="column" flexGrow={1}>
       <Box marginBottom={1} justifyContent="space-between">
@@ -143,13 +152,7 @@ export function CadastroList({ title, query, columns, pollMs = 60_000, emptyMess
       {rows.length === 0 ? (
         <Text dimColor>{emptyMessage ?? `nenhum ${title.toLowerCase()}`}</Text>
       ) : (
-        <Table
-          data={rows.map((r, i) => {
-            const out: Record<string, string> = { marker: i === selected ? '▸' : ' ' };
-            for (const c of columns) out[c.key] = c.render(r);
-            return out;
-          })}
-        />
+        <Table data={tableData} />
       )}
       {detail ? <DetailModal title={`${title} — detalhe`} data={detail} onClose={() => setDetail(null)} /> : null}
     </Box>
