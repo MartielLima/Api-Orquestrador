@@ -14,7 +14,7 @@ export async function withRefreshRetry<T>(
     return await doRequest();
   } catch (err) {
     if (!isAuthError(err)) throw err;
-    const newToken = await refresh();
+    await refresh();
     return doRequest();
   }
 }
