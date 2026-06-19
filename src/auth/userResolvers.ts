@@ -230,7 +230,23 @@ export const userResolvers = {
               RETURNING id`,
         args: [args.id],
       });
-      return (rows as unknown[]).length > 0;
+      const revoked = (rows as unknown[]).length > 0;
+      if (revoked) {
+        await recordAudit(
+          {
+            db: ctx.db,
+            logger: ctx.logger,
+            actorUserId: ctx.user?.id ?? null,
+            ip: ctx.request?.ip ?? null,
+            userAgent: ctx.request?.userAgent ?? null,
+          },
+          'refresh_token.revoke',
+          'refresh_tokens',
+          args.id,
+          { revoked_at: new Date().toISOString() },
+        );
+      }
+      return revoked;
     },
 
     deleteUser: async (_: unknown, args: { id: string }, ctx: AppContext) => {

@@ -262,4 +262,35 @@ describe('audit_log', () => {
       });
     });
   });
+
+  describe('revokeRefreshToken', () => {
+    it('grava entry com action=refresh_token.revoke e target_table=refresh_tokens', async () => {
+      const { admin, nonAdmin } = await seedAdminAndUser();
+      const p = await pool();
+      let tokenId: string;
+      try {
+        const { rows } = await p.query(
+          `INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+           VALUES ($1, 'test-hash', now() + interval '1 day') RETURNING id`,
+          [nonAdmin.id],
+        );
+        tokenId = rows[0].id;
+      } finally {
+        await p.end();
+      }
+
+      const { executeOperation } = await buildServerAs(admin);
+      await executeOperation({
+        query: `mutation R($id: ID!) { revokeRefreshToken(id: $id) }`,
+        variables: { id: tokenId },
+      });
+
+      const entries = await readAuditLog({ action: 'refresh_token.revoke', targetId: tokenId });
+      expect(entries).toHaveLength(1);
+      expect(entries[0].actor_user_id).toBe(admin.id);
+      expect(entries[0].target_table).toBe('refresh_tokens');
+      expect(entries[0].diff).toHaveProperty('revoked_at');
+      expect(typeof entries[0].diff.revoked_at).toBe('string');
+    });
+  });
 });
