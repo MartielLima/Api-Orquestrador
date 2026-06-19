@@ -139,8 +139,8 @@ export const Q_SYNC_STATUS = gql`
 `;
 
 export const Q_CLIENTES = gql`
-  query Clientes($quantidade: Int) {
-    clientes(quantidade: $quantidade) {
+  query Clientes($quantidade: Int, $idCliente: Int) {
+    clientes(quantidade: $quantidade, idCliente: $idCliente) {
       idCliente
       cnpj
       cpf
@@ -152,8 +152,8 @@ export const Q_CLIENTES = gql`
 `;
 
 export const Q_VEICULOS = gql`
-  query Veiculos($quantidade: Int) {
-    veiculos(quantidade: $quantidade) {
+  query Veiculos($quantidade: Int, $idVeiculo: Int) {
+    veiculos(quantidade: $quantidade, idVeiculo: $idVeiculo) {
       idVeiculo
       placa
       idCliente
@@ -171,8 +171,8 @@ export const Q_VEICULOS = gql`
 `;
 
 export const Q_MOTORISTAS = gql`
-  query Motoristas($quantidade: Int) {
-    motoristas(quantidade: $quantidade) {
+  query Motoristas($quantidade: Int, $idMotorista: Int) {
+    motoristas(quantidade: $quantidade, idMotorista: $idMotorista) {
       idMotorista
       nome
       tipoDocumento
