@@ -23,3 +23,6 @@ src/**/*.d.ts.map
 
 # Benchmark reports
 reports/
+
+# Git worktrees
+.worktrees/
