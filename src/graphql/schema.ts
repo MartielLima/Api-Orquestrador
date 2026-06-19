@@ -3,6 +3,7 @@ import gql from 'graphql-tag';
 export const typeDefs = gql`
   scalar DateTime
   scalar BigInt
+  scalar JSON
 
   type User {
     id: ID!
@@ -133,6 +134,18 @@ export const typeDefs = gql`
     error: String
   }
 
+  type AuditLogEntry {
+    id: ID!
+    actorUserId: ID
+    action: String!
+    targetTable: String!
+    targetId: String!
+    diff: JSON!
+    ip: String
+    userAgent: String
+    createdAt: DateTime!
+  }
+
   type CaixaPretaEvento {
     id: ID! @deprecated(reason: "Caixa-preta desativada na Sascar v2.07. Use posicoesRecentes.")
     idVeiculo: Int
@@ -165,6 +178,13 @@ export const typeDefs = gql`
     posicoesPorVeiculo(idVeiculo: Int!, dataInicio: DateTime!, dataFim: DateTime!): [Posicao!]!
     syncStatus: [SyncCursor!]!
     requestLog(limit: Int = 100, method: String): [RequestLogEntry!]!
+    auditLog(
+      limit: Int = 100,
+      actorUserId: ID,
+      action: String,
+      targetTable: String,
+      targetId: String
+    ): [AuditLogEntry!]!
     refreshTokens(userId: ID!): [RefreshToken!]!
     caixaPretaEventos(placa: String, idVeiculo: Int): [CaixaPretaEvento!]!
       @deprecated(reason: "Método 4.51 da Sascar desativado. Use posicoesRecentes.")
