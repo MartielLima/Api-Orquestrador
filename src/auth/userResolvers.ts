@@ -207,6 +207,19 @@ export const userResolvers = {
         args: [hash, args.id],
       });
       if (!rows[0]) throw new UserError(UserErrorCode.USER_NOT_FOUND, 'user not found');
+      await recordAudit(
+        {
+          db: ctx.db,
+          logger: ctx.logger,
+          actorUserId: ctx.user?.id ?? null,
+          ip: ctx.request?.ip ?? null,
+          userAgent: ctx.request?.userAgent ?? null,
+        },
+        'user.password_reset',
+        'users',
+        args.id,
+        { password_changed: true },
+      );
       return rowToUser(rows[0] as Record<string, unknown>);
     },
 

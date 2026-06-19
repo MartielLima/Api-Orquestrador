@@ -214,4 +214,28 @@ describe('audit_log', () => {
       expect(entries).toHaveLength(0);
     });
   });
+
+  describe('resetUserPassword', () => {
+    it('grava entry com marker {password_changed: true} e NUNCA contém hash/plaintext', async () => {
+      const { admin, nonAdmin } = await seedAdminAndUser();
+      const { executeOperation } = await buildServerAs(admin);
+
+      await executeOperation({
+        query: `mutation R($id: ID!, $p: String!) { resetUserPassword(id: $id, newPassword: $p) { id } }`,
+        variables: { id: nonAdmin.id, p: 'NewAa1!aaaa' },
+      });
+
+      const entries = await readAuditLog({ action: 'user.password_reset', targetId: nonAdmin.id });
+      expect(entries).toHaveLength(1);
+      expect(entries[0].actor_user_id).toBe(admin.id);
+      expect(entries[0].target_table).toBe('users');
+      expect(entries[0].diff).toEqual({ password_changed: true });
+
+      const serialized = JSON.stringify(entries[0].diff);
+      expect(serialized).not.toContain('NewAa1!aaaa');
+      expect(serialized).not.toContain('Audit1234');
+      expect(serialized.toLowerCase()).not.toContain('bcrypt');
+      expect(serialized).not.toContain('$2');
+    });
+  });
 });
