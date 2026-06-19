@@ -109,7 +109,7 @@ async function readAuditLog(filter: { action?: string; targetId?: string } = {})
       params.push(filter.targetId);
       where.push(`target_id = $${params.length}`);
     }
-    const sql = `SELECT id, actor_user_id, action, target_table, target_id, diff, ip::text AS ip, user_agent, created_at
+    const sql = `SELECT id, actor_user_id, action, target_table, target_id, diff, host(ip) AS ip, user_agent, created_at
                  FROM audit_log
                  ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
                  ORDER BY created_at DESC`;
@@ -291,6 +291,24 @@ describe('audit_log', () => {
       expect(entries[0].target_table).toBe('refresh_tokens');
       expect(entries[0].diff).toHaveProperty('revoked_at');
       expect(typeof entries[0].diff.revoked_at).toBe('string');
+    });
+  });
+
+  describe('request metadata', () => {
+    it('captura ip e userAgent do ctx.request no audit entry', async () => {
+      const { admin, nonAdmin } = await seedAdminAndUser();
+      const request = { ip: '203.0.113.42', userAgent: 'integration-test/1.0' };
+      const { executeOperation } = await buildServerAs(admin, request);
+
+      await executeOperation({
+        query: `mutation R($id: ID!, $p: String!) { resetUserPassword(id: $id, newPassword: $p) { id } }`,
+        variables: { id: nonAdmin.id, p: 'MetaAa1!aaaa' },
+      });
+
+      const entries = await readAuditLog({ action: 'user.password_reset', targetId: nonAdmin.id });
+      expect(entries).toHaveLength(1);
+      expect(entries[0].ip).toBe('203.0.113.42');
+      expect(entries[0].user_agent).toBe('integration-test/1.0');
     });
   });
 });
