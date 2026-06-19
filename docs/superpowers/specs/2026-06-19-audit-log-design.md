@@ -2,7 +2,7 @@
 
 **Data:** 2026-06-19
 **Status:** aprovado (design)
-**Escopo:** `src/auth/audit.ts` (novo), `src/auth/userResolvers.ts`, `src/context.ts`, `src/server.ts`, `src/graphql/schema.ts`, `src/graphql/resolvers.ts`, `src/db/migrations/0002_audit_log.sql`, `tests/integration/audit-log.spec.ts` (novo)
+**Escopo:** `src/auth/audit.ts` (novo), `src/auth/userResolvers.ts`, `src/context.ts`, `src/server.ts`, `src/graphql/schema.ts`, `src/graphql/resolvers.ts`, `src/db/migrations/0007_audit_log.sql`, `tests/integration/audit-log.spec.ts` (novo)
 
 ## Contexto e problema
 
@@ -33,7 +33,7 @@ Construir trilha de auditoria mínima viável para mutations que mudam identidad
 
 ## Design
 
-### 1. Migration: `src/db/migrations/0002_audit_log.sql`
+### 1. Migration: `src/db/migrations/0007_audit_log.sql`
 
 ```sql
 CREATE TABLE audit_log (
@@ -248,7 +248,7 @@ Helpers reaproveitados de `tests/integration/auth-coverage.spec.ts`: `seedNonAdm
 
 ## Critérios de aceitação
 
-- [ ] Migration `0002_audit_log.sql` roda em prod sem erro
+- [ ] Migration `0007_audit_log.sql` roda em prod sem erro
 - [ ] 13 testes de integração + 1 unit teste verdes
 - [ ] `npm run typecheck` verde
 - [ ] `npm run lint` verde
