@@ -131,22 +131,39 @@ export const userResolvers = {
         }
       }
       const { rows: existing } = await ctx.db.execute({
-        sql: 'SELECT id FROM users WHERE id = $1',
+        sql: 'SELECT id, role, active FROM users WHERE id = $1',
         args: [args.id],
       });
-      if (!existing[0]) throw new UserError(UserErrorCode.USER_NOT_FOUND, 'user not found');
+      const before = existing[0] as { id: string; role: string; active: boolean } | undefined;
+      if (!before) throw new UserError(UserErrorCode.USER_NOT_FOUND, 'user not found');
 
       const sets: string[] = [];
       const params: unknown[] = [];
       let i = 1;
+      const diff: Record<string, { from: unknown; to: unknown }> = {};
       if (parsed.data.role !== undefined) {
-        sets.push(`role = $${i++}`);
-        params.push(parsed.data.role);
+        if (parsed.data.role !== before.role) {
+          sets.push(`role = $${i++}`);
+          params.push(parsed.data.role);
+          diff.role = { from: before.role, to: parsed.data.role };
+        }
       }
       if (parsed.data.active !== undefined) {
-        sets.push(`active = $${i++}`);
-        params.push(parsed.data.active);
+        if (parsed.data.active !== before.active) {
+          sets.push(`active = $${i++}`);
+          params.push(parsed.data.active);
+          diff.active = { from: before.active, to: parsed.data.active };
+        }
       }
+
+      if (sets.length === 0) {
+        const { rows } = await ctx.db.execute({
+          sql: 'SELECT id, email, role, active, created_at FROM users WHERE id = $1',
+          args: [args.id],
+        });
+        return rowToUser(rows[0] as Record<string, unknown>);
+      }
+
       sets.push('updated_at = now()');
       params.push(args.id);
       const { rows } = await ctx.db.execute({
@@ -154,6 +171,19 @@ export const userResolvers = {
               RETURNING id, email, role, active, created_at`,
         args: params,
       });
+      await recordAudit(
+        {
+          db: ctx.db,
+          logger: ctx.logger,
+          actorUserId: ctx.user?.id ?? null,
+          ip: ctx.request?.ip ?? null,
+          userAgent: ctx.request?.userAgent ?? null,
+        },
+        'user.update',
+        'users',
+        args.id,
+        diff,
+      );
       return rowToUser(rows[0] as Record<string, unknown>);
     },
 

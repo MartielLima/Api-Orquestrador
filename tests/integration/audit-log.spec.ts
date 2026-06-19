@@ -156,4 +156,62 @@ describe('audit_log', () => {
       expect(entries[0].user_agent).toBeNull();
     });
   });
+
+  describe('updateUser', () => {
+    it('grava entry com diff.role={from,to} quando muda role', async () => {
+      const { admin, nonAdmin } = await seedAdminAndUser();
+      const { executeOperation } = await buildServerAs(admin);
+
+      await executeOperation({
+        query: `mutation U($id: ID!, $i: UpdateUserInput!) { updateUser(id: $id, input: $i) { id role } }`,
+        variables: { id: nonAdmin.id, i: { role: 'admin' } },
+      });
+
+      const entries = await readAuditLog({ action: 'user.update', targetId: nonAdmin.id });
+      expect(entries).toHaveLength(1);
+      expect(entries[0].actor_user_id).toBe(admin.id);
+      expect(entries[0].diff).toEqual({ role: { from: 'user', to: 'admin' } });
+    });
+
+    it('grava entry com diff.active={from,to} quando muda active', async () => {
+      const { admin, nonAdmin } = await seedAdminAndUser();
+      const { executeOperation } = await buildServerAs(admin);
+
+      await executeOperation({
+        query: `mutation U($id: ID!, $i: UpdateUserInput!) { updateUser(id: $id, input: $i) { id active } }`,
+        variables: { id: nonAdmin.id, i: { active: false } },
+      });
+
+      const entries = await readAuditLog({ action: 'user.update', targetId: nonAdmin.id });
+      expect(entries).toHaveLength(1);
+      expect(entries[0].diff).toEqual({ active: { from: true, to: false } });
+    });
+
+    it('NÃO grava entry quando update é noop (mesmos role+active)', async () => {
+      const { admin, nonAdmin } = await seedAdminAndUser();
+      const { executeOperation } = await buildServerAs(admin);
+
+      await executeOperation({
+        query: `mutation U($id: ID!, $i: UpdateUserInput!) { updateUser(id: $id, input: $i) { id } }`,
+        variables: { id: nonAdmin.id, i: { role: 'user', active: true } },
+      });
+
+      const entries = await readAuditLog({ action: 'user.update', targetId: nonAdmin.id });
+      expect(entries).toHaveLength(0);
+    });
+
+    it('NÃO grava entry em self-demote attempt (falha antes do UPDATE)', async () => {
+      const { admin } = await seedAdminAndUser();
+      const { executeOperation } = await buildServerAs(admin);
+
+      const res = await executeOperation({
+        query: `mutation U($id: ID!, $i: UpdateUserInput!) { updateUser(id: $id, input: $i) { id } }`,
+        variables: { id: admin.id, i: { role: 'user' } },
+      });
+
+      expect(codeFromError(res.body.singleResult)).toBe('CANNOT_DEMOTE_SELF');
+      const entries = await readAuditLog({ action: 'user.update', targetId: admin.id });
+      expect(entries).toHaveLength(0);
+    });
+  });
 });
