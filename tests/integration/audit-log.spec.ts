@@ -238,4 +238,28 @@ describe('audit_log', () => {
       expect(serialized).not.toContain('$2');
     });
   });
+
+  describe('deleteUser', () => {
+    it('grava entry com snapshot do row antes do DELETE', async () => {
+      const { admin, nonAdmin } = await seedAdminAndUser();
+      const { executeOperation } = await buildServerAs(admin);
+
+      const res = await executeOperation({
+        query: `mutation D($id: ID!) { deleteUser(id: $id) }`,
+        variables: { id: nonAdmin.id },
+      });
+      expect((res.body.singleResult.data as { deleteUser: boolean }).deleteUser).toBe(true);
+
+      const entries = await readAuditLog({ action: 'user.delete', targetId: nonAdmin.id });
+      expect(entries).toHaveLength(1);
+      expect(entries[0].actor_user_id).toBe(admin.id);
+      expect(entries[0].target_table).toBe('users');
+      expect(entries[0].diff).toEqual({
+        id: nonAdmin.id,
+        email: nonAdmin.email,
+        role: 'user',
+        active: true,
+      });
+    });
+  });
 });

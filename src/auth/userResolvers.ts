@@ -239,10 +239,11 @@ export const userResolvers = {
         throw new UserError(UserErrorCode.CANNOT_DEACTIVATE_SELF, 'cannot delete yourself');
       }
       const { rows: existing } = await ctx.db.execute({
-        sql: 'SELECT id FROM users WHERE id = $1',
+        sql: 'SELECT id, email, role, active FROM users WHERE id = $1',
         args: [args.id],
       });
-      if (!existing[0]) throw new UserError(UserErrorCode.USER_NOT_FOUND, 'user not found');
+      const before = existing[0] as { id: string; email: string; role: string; active: boolean } | undefined;
+      if (!before) throw new UserError(UserErrorCode.USER_NOT_FOUND, 'user not found');
       await ctx.db.execute({
         sql: 'DELETE FROM refresh_tokens WHERE user_id = $1',
         args: [args.id],
@@ -251,6 +252,21 @@ export const userResolvers = {
         sql: 'DELETE FROM users WHERE id = $1 RETURNING id',
         args: [args.id],
       });
+      if ((rows as unknown[]).length > 0) {
+        await recordAudit(
+          {
+            db: ctx.db,
+            logger: ctx.logger,
+            actorUserId: ctx.user?.id ?? null,
+            ip: ctx.request?.ip ?? null,
+            userAgent: ctx.request?.userAgent ?? null,
+          },
+          'user.delete',
+          'users',
+          args.id,
+          { id: before.id, email: before.email, role: before.role, active: before.active },
+        );
+      }
       return (rows as unknown[]).length > 0;
     },
   },
