@@ -15,6 +15,57 @@ Introspection está **desabilitada em prod** (Apollo Server 4+), então não dá
 
 ---
 
+## Setup no Postman (autocomplete)
+
+`schema.graphql` (raiz do repo) é o SDL completo. Importando no Postman você ganha **autocomplete** dos campos no editor de query.
+
+### Método 1: Criar uma API no Postman (recomendado)
+
+1. Sidebar esquerdo → **APIs** → **+ Create new API**
+2. Escolha **GraphQL**
+3. Em **Define schema**:
+   - **Schema type**: `SDL`
+   - Cole o conteúdo de `schema.graphql` (raiz do repo)
+4. Em **Configure requests**:
+   - **URL**: `https://orcapi.martiellima.com/`
+   - **Headers padrão** (importantes):
+     - `Content-Type`: `application/json`
+     - `apollo-require-preflight`: `true` (bypass CSRF)
+5. Salve
+
+A partir daí, ao criar requests nessa API o editor tem autocomplete de campos, mostra os tipos, e valida a query enquanto digita.
+
+### Método 2: Import direto
+
+1. **File > Import** no Postman
+2. Selecione `schema.graphql` (raiz do repo)
+3. Postman detecta como schema GraphQL e cria a API automaticamente
+
+### Headers obrigatórios em toda request
+
+Apollo Server 4+ tem **CSRF protection**. Toda request POST precisa de:
+
+```
+Content-Type: application/json
+apollo-require-preflight: true
+```
+
+E pra requests autenticadas, adicionalmente:
+
+```
+Authorization: Bearer <accessToken>
+```
+
+### Como manter o schema em sync
+
+Se você (ou alguém) editar `src/graphql/schema.ts`:
+
+1. Atualize `schema.graphql` na raiz do repo (mantenha idêntico)
+2. Atualize os exemplos de uso neste doc
+3. Commit e push — quem usa Postman re-importa o schema
+
+---
+
 ## Queries
 
 ### 🔓 `health`
