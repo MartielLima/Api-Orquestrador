@@ -4,6 +4,10 @@
 **Header obrigatório** (exceto `health`, `login`, `refresh`): `Authorization: Bearer <accessToken>`.
 **Tokens:** obtidos via `mutation login` (access TTL 15min, refresh TTL 7d). Renovar via `mutation refresh` (rotação).
 
+> **Guia do cliente (Postman, browser, Node):** [`docs/session-management.md`](session-management.md) — cobre setup no Postman, Pre-request Script para auto-refresh, gestão de tokens em JS, troubleshooting de "não autenticado".
+> **Schema SDL (download):** [`schema.graphql`](../schema.graphql) (raiz do repo) — cole no Postman para autocomplete.
+> **Referência de tipos:** [`docs/api-schema-reference.md`](api-schema-reference.md).
+
 > Visão geral (índice): ver [README.md → API GraphQL](README.md#api-graphql).
 
 ---
