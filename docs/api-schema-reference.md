@@ -4,6 +4,10 @@ Referência rápida de todos os queries e mutations disponíveis em `https://orc
 
 Introspection está **desabilitada em prod** (Apollo Server 4+), então não dá pra usar `__schema` no Postman. Este doc serve como source-of-truth.
 
+**Arquivos relacionados:**
+- `schema.graphql` (raiz do repo) — SDL completo, importável direto no Postman pra autocomplete
+- `audit-log.postman_collection.json` (raiz do repo) — collection com requests prontas
+
 **Convenções:**
 - 🔓 = público (não precisa token)
 - 🔐 = requer `Authorization: Bearer <token>` (qualquer usuário autenticado)
