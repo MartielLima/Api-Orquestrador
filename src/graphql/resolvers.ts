@@ -6,6 +6,8 @@ import { getVeiculos } from '../domain/veiculos';
 import { getMotoristas } from '../domain/motoristas';
 import { getPosicoesRecentes, fetchAndUpsertPosicoes } from '../domain/posicoes';
 import { getCaixaPretaEventos } from '../domain/caixaPreta';
+import { getEventosInercia } from '../domain/inercia';
+import { getEventosFadiga } from '../domain/fadiga';
 import { loadConfig } from '../config';
 import { requireAuth, requireAdmin } from '../auth/guards';
 import type { AppContext } from '../context';
@@ -86,6 +88,32 @@ export const resolvers = {
         lastIdPacote: r.last_id_pacote ? String(r.last_id_pacote) : null,
         lastSyncedAt: r.last_synced_at,
       }));
+    },
+    eventosInercia: (
+      _: unknown,
+      args: {
+        dataInicio: string;
+        dataFim: string;
+        idVeiculo: number;
+        quantidade?: number;
+      },
+      ctx: AppContext,
+    ) => {
+      requireAuth(ctx);
+      return getEventosInercia(ctx, args);
+    },
+    eventosFadiga: (
+      _: unknown,
+      args: {
+        quantidade?: number;
+        idMotorista?: number;
+        dataInicio?: string;
+        dataFim?: string;
+      },
+      ctx: AppContext,
+    ) => {
+      requireAuth(ctx);
+      return getEventosFadiga(ctx, args);
     },
     caixaPretaEventos: (
       _: unknown,
@@ -169,7 +197,8 @@ export const resolvers = {
   DateTime: {
     __serialize: (v: unknown) => (v instanceof Date ? v.toISOString() : v),
     __parseValue: (v: unknown) => (typeof v === 'string' ? new Date(v) : null),
-    __parseLiteral: () => null,
+    __parseLiteral: (ast: { kind: string; value?: string }) =>
+      ast.kind === 'StringValue' && typeof ast.value === 'string' ? new Date(ast.value) : null,
   },
   BigInt: {
     __serialize: (v: unknown) =>

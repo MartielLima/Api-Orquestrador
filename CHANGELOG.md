@@ -24,6 +24,7 @@ Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue 
 - **feat(lib)**: New `src/lib/concurrency.ts` — helper `runWithConcurrency(items, n, fn)` para paralelizar loops com concorrência limitada. Usado pelo cron `syncPositions` (paralelismo a nível de iteração; chamadas SOAP continuam serializadas pelo SDK).
 - **test(unit)**: New `tests/unit/concurrency.spec.ts` — 5 cases para `runWithConcurrency` (ordem dos resultados, bound de concorrência, propagação de erro, lista vazia, speedup paralelo).
 - **test(integration)**: New `tests/integration/posicoes-stale.spec.ts` — 3 cases cobrindo fresh cache (sem chamada Sascar), stale cache (retorna em <1s sem bloquear no Sascar mockado de 5s), e cold bootstrap (blocking).
+- **feat(graphql)**: Expor `eventosInercia(dataInicio: DateTime!, dataFim: DateTime!, idVeiculo: Int!, quantidade: Int = 100)` espelhando `obterDeltaTelemetriaIntegracaoInercia` do Sascar SOAP. Expor `eventosFadiga(quantidade: Int = 100, idMotorista: Int, dataInicio: DateTime, dataFim: DateTime)` espelhando `obterEventosTempoDirecao`. Tipos `EventoInercia` (10 campos) e `EventoFadiga` (14 campos) adicionados. Sem cache, sem cursor (YAGNI). Wrappers em `src/domain/inercia.ts` e `src/domain/fadiga.ts` logam via `logRequest` e propagam erros via `mapSascarError`. Sem campos inventados — apenas campos reais do SDK sascar-sdk v1.1.1.
 
 ### Fixed
 

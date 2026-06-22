@@ -117,6 +117,8 @@ docker images api-orquestrador:0.1.0
 **Tokens:** obtidos via `mutation login` (TTL 15min) ou `mutation refresh` (rotação, TTL 7d).
 
 Documentação completa (exemplos, códigos de erro, notas por método): [`docs/api.md`](docs/api.md).
+**Como consumir do Postman / browser / Node (login, refresh automático, troubleshooting):** [`docs/session-management.md`](docs/session-management.md).
+**Schema SDL (download para autocomplete no Postman):** [`schema.graphql`](schema.graphql) na raiz do repo.
 
 ### Queries
 
@@ -130,6 +132,8 @@ Documentação completa (exemplos, códigos de erro, notas por método): [`docs/
 | `motoristas(idMotorista, quantidade=1000)` | sim | `[Motorista!]!` | Cadastro de motoristas. Cache 24h. |
 | `posicoesRecentes(quantidade=1000)` | sim | `[Posicao!]!` | Posições recentes (últimos 5min) do banco local. |
 | `posicoesPorVeiculo(idVeiculo!, dataInicio!, dataFim!)` | sim | `[Posicao!]!` | Posições de um veículo em intervalo (sincroniza antes). |
+| `eventosInercia(dataInicio!, dataFim!, idVeiculo!, quantidade=100)` | sim | `[EventoInercia!]!` | Eventos de inércia (delta telemetria) — espelho de `obterDeltaTelemetriaIntegracaoInercia` |
+| `eventosFadiga(quantidade=100, idMotorista?, dataInicio?, dataFim?)` | sim | `[EventoFadiga!]!` | Eventos de fadiga do motorista (jornada excedida, tempo de direção) — espelho de `obterEventosTempoDirecao` |
 | `syncStatus` | sim | `[SyncCursor!]!` | Estado do cursor de sync por veículo/método. |
 | `requestLog(limit=100, method)` | sim | `[RequestLogEntry!]!` | Auditoria: cada chamada (Sascar/auth/cron) gravada. `method` filtra. |
 | `refreshTokens(userId!)` | admin | `[RefreshToken!]!` | Refresh tokens ativos (não revogados, não expirados) de um usuário. |
@@ -322,6 +326,10 @@ A imagem (`api-orquestrador:0.1.0`) é multi-stage (Node 22-alpine):
 - **Plano de implementação (v1)**: `docs/superpowers/plans/2026-06-12-api-orquestrador-sascar.md`
 - **Plano de implementação (TUI)**: `docs/superpowers/plans/2026-06-15-tui-orquestrador.md`
 - **API GraphQL**: `docs/api.md` (inclui seção de user management admin-gated)
+- **Schema reference**: `docs/api-schema-reference.md` (queries, mutations, types, scalars)
+- **Session management (cliente)**: `docs/session-management.md` (Postman, browser, Node — login, refresh automático, troubleshooting)
+- **Schema GraphQL (SDL, download para autocomplete)**: `schema.graphql` (raiz do repo)
+- **Collection Postman**: `audit-log.postman_collection.json` (raiz do repo) — já vem com Pre-request Script de auto-refresh
 - **TUI (Terminal User Interface)**: `docs/tui.md` (7 views, atalhos, setup, limitações)
 - **Changelog**: `CHANGELOG.md`
 

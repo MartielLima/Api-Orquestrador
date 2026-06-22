@@ -1,9 +1,96 @@
 {
   "info": {
     "name": "Api-Orquestrador — Audit Log",
-    "description": "Testes da feature de audit log contra https://orcapi.martiellima.com/.\n\nSCHEMA COMPLETO (introspection desabilitada em prod): ver docs/api-schema-reference.md no repo.\n\nNOTA: Apollo Server 4+ tem CSRF protection. A collection ja envia os 2 headers necessarios:\n- Content-Type: application/json (parse do body)\n- apollo-require-preflight: true (bypass CSRF)\n\nEndpoint: https://orcapi.martiellima.com/ (raiz) ou /graphql — ambos funcionam com POST.\n\nQUICK REFERENCE (queries marcadas com * precisam de token, ** precisam de admin):\n  Queries: health, me*, users**, clientes*, veiculos*, motoristas*, posicoesRecentes*, posicoesPorVeiculo*, syncStatus**, requestLog**, auditLog**, refreshTokens**, caixaPretaEventos*\n  Mutations: login, refresh, createUser**, updateUser**, deleteUser**, resetUserPassword**, revokeRefreshToken**",
+    "_postman_id": "audit-log-2026-06-20",
+    "description": "Testes da feature de audit log contra https://orcapi.martiellima.com/.\n\nSCHEMA COMPLETO (introspection desabilitada em prod): ver docs/api-schema-reference.md no repo.\nDOWNLOAD DO SCHEMA (SDL para autocomplete no Postman): schema.graphql na raiz do repo.\nGUIA DETALHADO DE SESSAO (login, refresh, troubleshooting): docs/session-management.md.\n\nNOTA: Apollo Server 4+ tem CSRF protection. A collection ja envia os 2 headers necessarios:\n- Content-Type: application/json (parse do body)\n- apollo-require-preflight: true (bypass CSRF)\n\nAUTENTICACAO: rode 'Login (admin)' primeiro. Ele salva {{token}} (accessToken, 15min) E {{refreshToken}} (refreshToken, 7d) nas variaveis da collection. Os requests autenticados ja enviam 'Authorization: Bearer {{token}}' no header.\n\nAUTO-REFRESH: a collection tem um Pre-request Script no nivel da collection que detecta {{token}} expirado (ou faltando) e chama 'mutation refresh' automaticamente antes de cada request. Nao precisa re-logar manualmente a cada 15min.\n\nSe uma request retornar 'UNAUTHENTICATED', confira:\n1. Voce rodou 'Login (admin)' nesta sessao? {{token}} deve estar preenchido em Edit Collection > Variables.\n2. Authorization no header e 'Bearer {{token}}' (sem prefixo Bearer duplicado).\n3. baseUrl esta apontando pro servidor certo (tokens nao funcionam cross-deploy).\n\nEndpoint: https://orcapi.martiellima.com/ (raiz) ou /graphql — ambos funcionam com POST.\n\nQUICK REFERENCE (queries marcadas com * precisam de token, ** precisam de admin):\n  Queries: health, me*, users**, clientes*, veiculos*, motoristas*, posicoesRecentes*, posicoesPorVeiculo*, syncStatus**, requestLog**, auditLog**, refreshTokens**, caixaPretaEventos*\n  Mutations: login, refresh, createUser**, updateUser**, deleteUser**, resetUserPassword**, revokeRefreshToken**",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Pre-request Script — auto-refresh do accessToken.",
+          "// Roda antes de CADA request da collection (exceto onde sobrescrito).",
+          "// Logica:",
+          "//   1. Decodifica o payload do {{token}} e le o campo 'exp' (sem validar assinatura — UX apenas).",
+          "//   2. Se ainda faltam > 30s para expirar, no-op.",
+          "//   3. Se expirou (ou nao existe), chama 'mutation refresh' com {{refreshToken}}.",
+          "//   4. Salva os novos tokens nas variaveis da collection e segue.",
+          "//   5. Se o refresh falhar (token revogado/expirado), limpa as vars — faca Login novamente.",
+          "",
+          "const baseUrl = pm.collectionVariables.get('baseUrl');",
+          "const token = pm.collectionVariables.get('token');",
+          "const refreshToken = pm.collectionVariables.get('refreshToken');",
+          "",
+          "function decodeJwtExp(jwt) {",
+          "  if (!jwt) return 0;",
+          "  const part = jwt.split('.')[1];",
+          "  if (!part) return 0;",
+          "  try {",
+          "    const pad = part + '='.repeat((4 - part.length % 4) % 4);",
+          "    const payload = JSON.parse(atob(pad.replace(/-/g, '+').replace(/_/g, '/')));",
+          "    return payload.exp || 0;",
+          "  } catch (e) {",
+          "    return 0;",
+          "  }",
+          "}",
+          "",
+          "async function callRefresh(rt) {",
+          "  const res = await fetch(baseUrl, {",
+          "    method: 'POST',",
+          "    headers: {",
+          "      'Content-Type': 'application/json',",
+          "      'apollo-require-preflight': 'true'",
+          "    },",
+          "    body: JSON.stringify({",
+          "      query: 'mutation R($rt: String!) { refresh(refreshToken: $rt) { accessToken refreshToken user { id email role } } }',",
+          "      variables: { rt }",
+          "    })",
+          "  });",
+          "  return res.json();",
+          "}",
+          "",
+          "(async () => {",
+          "  const exp = decodeJwtExp(token);",
+          "  const now = Math.floor(Date.now() / 1000);",
+          "  if (exp > now + 30) return;",
+          "",
+          "  if (!refreshToken) {",
+          "    console.warn('[auto-refresh] sem refreshToken salvo — execute Login (admin) primeiro');",
+          "    return;",
+          "  }",
+          "",
+          "  try {",
+          "    const json = await callRefresh(refreshToken);",
+          "    if (json.data && json.data.refresh && json.data.refresh.accessToken) {",
+          "      pm.collectionVariables.set('token', json.data.refresh.accessToken);",
+          "      pm.collectionVariables.set('refreshToken', json.data.refresh.refreshToken);",
+          "      console.log('[auto-refresh] tokens renovados automaticamente');",
+          "    } else {",
+          "      pm.collectionVariables.unset('token');",
+          "      pm.collectionVariables.unset('refreshToken');",
+          "      console.error('[auto-refresh] refresh falhou — faca Login novamente', JSON.stringify(json));",
+          "    }",
+          "  } catch (e) {",
+          "    console.error('[auto-refresh] erro de rede ao chamar refresh:', e.message);",
+          "  }",
+          "})();"
+        ]
+      }
+    }
+  ],
   "variable": [
     {
       "key": "baseUrl",
@@ -12,6 +99,11 @@
     },
     {
       "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
       "value": "",
       "type": "string"
     },
@@ -36,7 +128,9 @@
                   "const json = pm.response.json();",
                   "if (json.data && json.data.login && json.data.login.accessToken) {",
                   "  pm.collectionVariables.set('token', json.data.login.accessToken);",
-                  "  console.log('Token salvo em {{token}}');",
+                  "  pm.collectionVariables.set('refreshToken', json.data.login.refreshToken);",
+                  "  console.log('Tokens salvos — {{token}} (15min) e {{refreshToken}} (7d)');",
+                  "  pm.test('login retornou refreshToken', () => pm.expect(json.data.login.refreshToken).to.be.a('string').and.not.empty);",
                   "} else {",
                   "  console.error('Login falhou:', JSON.stringify(json));",
                   "}"
@@ -52,7 +146,38 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"query\":\"mutation L($e: String!, $p: String!) { login(email: $e, password: $p) { accessToken user { id email role } } }\",\"variables\":{\"e\":\"admin@local.dev\",\"p\":\"admin1234\"}}"
+              "raw": "{\"query\":\"mutation L($e: String!, $p: String!) { login(email: $e, password: $p) { accessToken refreshToken user { id email role } } }\",\"variables\":{\"e\":\"admin@local.dev\",\"p\":\"admin1234\"}}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        },
+        {
+          "name": "Me (verifica token salvo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"{ me { id email role active } }\"}"
+            },
+            "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
+          }
+        },
+        {
+          "name": "Refresh (manual, raramente necessario)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "apollo-require-preflight", "value": "true" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"mutation R($rt: String!) { refresh(refreshToken: $rt) { accessToken refreshToken user { id email role } } }\",\"variables\":{\"rt\":\"{{refreshToken}}\"}}"
             },
             "url": { "raw": "{{baseUrl}}", "host": ["{{baseUrl}}"] }
           }
@@ -79,6 +204,9 @@
         },
         {
           "name": "auditLog sem token (esperado UNAUTHENTICATED)",
+          "auth": {
+            "type": "noauth"
+          },
           "request": {
             "method": "POST",
             "header": [
