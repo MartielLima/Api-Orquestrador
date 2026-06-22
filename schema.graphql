@@ -170,11 +170,6 @@ type EventoInercia {
   distanciaPercorrida: Float
 }
 
-type MotoristaEvento {
-  idMotorista: Int!
-  nome: String!
-}
-
 type EventoFadiga {
   idVeiculo: Int!
   dataInicio: DateTime!

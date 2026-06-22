@@ -169,11 +169,6 @@ export const typeDefs = gql`
     distanciaPercorrida: Float
   }
 
-  type MotoristaEvento {
-    idMotorista: Int!
-    nome: String!
-  }
-
   type EventoFadiga {
     idVeiculo: Int!
     dataInicio: DateTime!
