@@ -197,7 +197,8 @@ export const resolvers = {
   DateTime: {
     __serialize: (v: unknown) => (v instanceof Date ? v.toISOString() : v),
     __parseValue: (v: unknown) => (typeof v === 'string' ? new Date(v) : null),
-    __parseLiteral: () => null,
+    __parseLiteral: (ast: { kind: string; value?: string }) =>
+      ast.kind === 'StringValue' && typeof ast.value === 'string' ? new Date(ast.value) : null,
   },
   BigInt: {
     __serialize: (v: unknown) =>
