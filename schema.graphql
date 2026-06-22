@@ -157,6 +157,41 @@ type CaixaPretaEvento {
   velocidade: Float
 }
 
+type EventoInercia {
+  idVeiculo: Int!
+  dataPosicao: DateTime!
+  idMotorista: Int
+  nomeMotorista: String
+  latitude: Float
+  longitude: Float
+  velocidadeMaximaFaixaAmarela: Float
+  rpmMaximo: Int
+  velocidadeMedia: Float
+  distanciaPercorrida: Float
+}
+
+type MotoristaEvento {
+  idMotorista: Int!
+  nome: String!
+}
+
+type EventoFadiga {
+  idVeiculo: Int!
+  dataInicio: DateTime!
+  eventoTempoDirecao: Int!
+  descricaoEvento: String!
+  eventoTempoDirecaoAnterior: Int
+  descricaoEventoAnterior: String
+  idMotorista: Int!
+  nomeMotorista: String!
+  idCliente: Int
+  nomeCliente: String
+  latitude: Float
+  longitude: Float
+  odometro: Float
+  placa: String
+}
+
 input CreateUserInput {
   email: String!
   password: String!
@@ -178,6 +213,20 @@ type Query {
   posicoesRecentes(quantidade: Int = 1000): [Posicao!]!
   posicoesPorVeiculo(idVeiculo: Int!, dataInicio: DateTime!, dataFim: DateTime!): [Posicao!]!
   syncStatus: [SyncCursor!]!
+  """Eventos de inércia (delta telemetria) — espelho de obterDeltaTelemetriaIntegracaoInercia"""
+  eventosInercia(
+    dataInicio: DateTime!
+    dataFim: DateTime!
+    idVeiculo: Int!
+    quantidade: Int = 100
+  ): [EventoInercia!]!
+  """Eventos de fadiga do motorista (tempo de direção) — espelho de obterEventosTempoDirecao"""
+  eventosFadiga(
+    quantidade: Int = 100
+    idMotorista: Int
+    dataInicio: DateTime
+    dataFim: DateTime
+  ): [EventoFadiga!]!
   requestLog(limit: Int = 100, method: String): [RequestLogEntry!]!
   auditLog(
     limit: Int = 100,
