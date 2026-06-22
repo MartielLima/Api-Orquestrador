@@ -132,6 +132,8 @@ Documentação completa (exemplos, códigos de erro, notas por método): [`docs/
 | `motoristas(idMotorista, quantidade=1000)` | sim | `[Motorista!]!` | Cadastro de motoristas. Cache 24h. |
 | `posicoesRecentes(quantidade=1000)` | sim | `[Posicao!]!` | Posições recentes (últimos 5min) do banco local. |
 | `posicoesPorVeiculo(idVeiculo!, dataInicio!, dataFim!)` | sim | `[Posicao!]!` | Posições de um veículo em intervalo (sincroniza antes). |
+| `eventosInercia(dataInicio!, dataFim!, idVeiculo!, quantidade=100)` | sim | `[EventoInercia!]!` | Eventos de inércia (delta telemetria) — espelho de `obterDeltaTelemetriaIntegracaoInercia` |
+| `eventosFadiga(quantidade=100, idMotorista?, dataInicio?, dataFim?)` | sim | `[EventoFadiga!]!` | Eventos de fadiga do motorista (jornada excedida, tempo de direção) — espelho de `obterEventosTempoDirecao` |
 | `syncStatus` | sim | `[SyncCursor!]!` | Estado do cursor de sync por veículo/método. |
 | `requestLog(limit=100, method)` | sim | `[RequestLogEntry!]!` | Auditoria: cada chamada (Sascar/auth/cron) gravada. `method` filtra. |
 | `refreshTokens(userId!)` | admin | `[RefreshToken!]!` | Refresh tokens ativos (não revogados, não expirados) de um usuário. |
