@@ -123,8 +123,8 @@ describe('eventosInercia GraphQL', () => {
       { contextValue: ctx },
     );
     expect(spy).toHaveBeenCalledWith(
-      new Date('2026-06-01T00:00:00Z'),
-      new Date('2026-06-22T23:59:59Z'),
+      '2026-06-01 00:00:00',
+      '2026-06-22 23:59:59',
       12345,
       100,
     );
@@ -148,8 +148,8 @@ describe('eventosInercia GraphQL', () => {
       { contextValue: ctx },
     );
     expect(spy).toHaveBeenCalledWith(
-      new Date('2026-06-01T00:00:00Z'),
-      new Date('2026-06-22T23:59:59Z'),
+      '2026-06-01 00:00:00',
+      '2026-06-22 23:59:59',
       12345,
       25,
     );

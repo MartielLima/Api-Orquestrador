@@ -38,7 +38,10 @@ export interface GetEventosInerciaArgs {
 
 function toSascarDate(v: string | Date | null | undefined): string | undefined {
   if (v == null) return undefined;
-  if (v instanceof Date) return v.toISOString();
+  if (v instanceof Date) {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${v.getUTCFullYear()}-${pad(v.getUTCMonth() + 1)}-${pad(v.getUTCDate())} ${pad(v.getUTCHours())}:${pad(v.getUTCMinutes())}:${pad(v.getUTCSeconds())}`;
+  }
   return v;
 }
 
