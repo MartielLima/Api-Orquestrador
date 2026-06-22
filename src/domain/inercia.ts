@@ -36,6 +36,12 @@ export interface GetEventosInerciaArgs {
   quantidade?: number;
 }
 
+function toSascarDate(v: string | Date | null | undefined): string | undefined {
+  if (v == null) return undefined;
+  if (v instanceof Date) return v.toISOString();
+  return v;
+}
+
 function mapDeltaTelemetria(item: SascarDeltaTelemetria): EventoInercia {
   return {
     idVeiculo: item.idVeiculo,
@@ -60,7 +66,7 @@ export async function getEventosInercia(
   try {
     const raw = await ctx.orchestrator.call<SascarDeltaTelemetria[]>(
       'obterDeltaTelemetriaIntegracaoInercia',
-      [args.dataInicio, args.dataFim, args.idVeiculo, quantidade],
+      [toSascarDate(args.dataInicio), toSascarDate(args.dataFim), args.idVeiculo, quantidade],
     );
     await logRequest(ctx.db, {
       method: 'obterDeltaTelemetriaIntegracaoInercia',

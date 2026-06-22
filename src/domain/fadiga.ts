@@ -44,6 +44,12 @@ export interface GetEventosFadigaArgs {
   dataFim?: string;
 }
 
+function toSascarDate(v: string | Date | null | undefined): string | undefined {
+  if (v == null) return undefined;
+  if (v instanceof Date) return v.toISOString();
+  return v;
+}
+
 function mapEventoTempoDirecao(item: SascarEventoTempoDirecao): EventoFadiga {
   return {
     idVeiculo: item.idVeiculo,
@@ -72,7 +78,7 @@ export async function getEventosFadiga(
   try {
     const raw = await ctx.orchestrator.call<SascarEventoTempoDirecao[]>(
       'obterEventosTempoDirecao',
-      [quantidade, args.idMotorista ?? undefined, args.dataInicio, args.dataFim],
+      [quantidade, args.idMotorista ?? undefined, toSascarDate(args.dataInicio), toSascarDate(args.dataFim)],
     );
     await logRequest(ctx.db, {
       method: 'obterEventosTempoDirecao',
