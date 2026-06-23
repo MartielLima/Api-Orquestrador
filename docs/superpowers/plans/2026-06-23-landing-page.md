@@ -4,9 +4,9 @@
 
 **Goal:** Substituir o Apollo Sandbox do `GET /` por uma landing page HTML estática com texto breve sobre a API e link para a documentação no GitHub, sem alterar o `POST /` (GraphQL).
 
-**Architecture:** Adicionar a opção `landingPage: <string>` na chamada `startStandaloneServer` em `src/server.ts`. O Apollo standalone server já faz dispatch por método HTTP: `GET` serve o HTML estático, `POST` (e outros) vão para o handler do GraphQL. Sem mudança de schema, resolvers, auth, ou dependências. Sem assets externos (HTML + CSS inline, zero `<script>`, zero CDN).
+**Architecture:** Criar um plugin Apollo (`src/server/landingPagePlugin.ts`) cuja `serverListener.renderLandingPage()` retorna o HTML custom. Adicionar esse plugin ao array `plugins` do `new ApolloServer(...)` em `src/server.ts`. O Apollo standalone server faz dispatch por método HTTP: `GET` serve o HTML estático via plugin, `POST` (e outros) vão para o handler do GraphQL. Sem mudança de schema, resolvers, auth, ou dependências. Sem assets externos (HTML + CSS inline, zero `<script>`, zero CDN).
 
-**Tech Stack:** TypeScript, Node 18+ (built-in `fetch`), jest + ts-jest, @apollo/server/standalone.
+**Tech Stack:** TypeScript, Node 18+ (built-in `fetch`), jest + ts-jest, @apollo/server v4 (plugins).
 
 **Spec:** `docs/superpowers/specs/2026-06-23-landing-page-design.md`
 
@@ -18,7 +18,8 @@
 |---|---|---|
 | `tests/helpers/jest-setup.js` | Adicionar `API_PORT` único por worker (evita conflito de porta entre 4 jest workers paralelos) | Modificar |
 | `tests/integration/landing-page.spec.ts` | Suite nova com 2 testes: GET / HTML + POST / GraphQL regression | Criar |
-| `src/server.ts` | Adicionar `landingPage: <html>` em `startStandaloneServer` | Modificar |
+| `src/server/landingPagePlugin.ts` | Plugin Apollo `renderLandingPage()` que serve HTML custom no `GET /` | Criar |
+| `src/server.ts` | Importa e adiciona `landingPagePlugin(...)` no array `plugins` do `new ApolloServer(...)` | Modificar |
 | `CHANGELOG.md` | Entrada em `[Unreleased] > ### Added` | Modificar |
 
 ---
@@ -28,7 +29,7 @@
 **Files:**
 - Modify: `tests/helpers/jest-setup.js` (adicionar 1 linha)
 
-**Contexto:** `jest.config.ts:41` define `maxWorkers: 4`. Cada worker roda em paralelo. O `startServer()` de `src/server.ts:62` usa `cfg.api.port` (default 4000). Se 2 workers rodarem `landing-page.spec.ts` ao mesmo tempo, colidem na porta e o segundo teste falha com `EADDRINUSE`. Solução: cada worker ganha uma porta única (`4000 + workerId`). O mesmo padrão já é usado para `DATABASE_URL` no mesmo arquivo (linhas 1–6).
+**Contexto:** `jest.config.ts:41` define `maxWorkers: 4`. Cada worker roda em paralelo. O `startServer()` de `src/server.ts` usa `cfg.api.port` (default 4000). Se 2 workers rodarem `landing-page.spec.ts` ao mesmo tempo, colidem na porta e o segundo teste falha com `EADDRINUSE`. Solução: cada worker ganha uma porta única (`4000 + workerId`). O mesmo padrão já é usado para `DATABASE_URL` no mesmo arquivo (linhas 1–6).
 
 - [ ] **Step 1.1: Adicionar `API_PORT` em `tests/helpers/jest-setup.js`**
 
@@ -116,11 +117,13 @@ describe('landing page', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: '{ health }' }),
     });
-    const json = await res.json();
+    const json = (await res.json()) as { data?: { health?: string } };
     expect(json.data?.health).toBe('ok');
   });
 });
 ```
+
+**Nota sobre o cast TS:** `res.json()` retorna `unknown` (lib.dom.d.ts), e o `tsconfig.json` deste projeto define `"strict": true`. Sem o cast `(await res.json()) as { data?: { health?: string } }` a suite nem compila. O cast é mínimo, não muda o runtime, e o teste continua verificando o mesmo invariante (`json.data.health === 'ok'`).
 
 **Pré-condições que precisam estar OK antes de rodar:**
 - Postgres rodando (`docker compose up -d postgres` ou conforme `README.md:54-83`).
@@ -134,7 +137,7 @@ npm test -- --testPathPattern=landing-page
 ```
 
 Esperado: AMBOS os testes falham.
-- `GET / returns 200 text/html...` falha porque o Apollo serve o Sandbox por padrão (HTML diferente, não contém "Api-Orquestrador" nem o link do GitHub) — ou o body já é Apollo Sandbox HTML.
+- `GET / returns 200 text/html...` falha porque o Apollo standalone não tem landing page handler — `GET /` é forwarded pro executor GraphQL que retorna HTTP 400 (no operation found). Verificado em `node_modules/@apollo/server/dist/esm/standalone/index.js:9-34` (só monta `cors`, `express.json`, `expressMiddleware`).
 - `POST / still serves GraphQL (regression)` passa (ainda não tocamos no server.ts).
 
 Se AMBOS falharem por outro motivo (DB não acessível, port em uso, env vars faltando), corrigir o setup antes de prosseguir. O `POST /` test DEVE passar antes de seguir para a Task 3 — é a baseline de regressão.
@@ -148,16 +151,47 @@ git commit -m "test(server): failing test for landing page on GET /"
 
 ---
 
-## Task 3: Adicionar `landingPage` em `src/server.ts`
+## Task 3: Plugin `landingPagePlugin` + wire-up em `src/server.ts`
 
 **Files:**
-- Modify: `src/server.ts:39-50` (o construtor `new ApolloServer(...)`)
+- Create: `src/server/landingPagePlugin.ts`
+- Modify: `src/server.ts` (import + adicionar plugin no array `plugins`)
 
-> **⚠️ Correção:** o `landingPage` NÃO é opção do `startStandaloneServer` — é do construtor `new ApolloServer(...)`. Verificado em `node_modules/@apollo/server/dist/esm/standalone/index.d.ts:12-16` (só aceita `context` e `listen`) e `node_modules/@apollo/server/dist/esm/ApolloServer.d.ts:18` (campo `landingPage: LandingPage | null` no `ApolloServerOptions`).
+> **⚠️ Correção dupla do design original:** o `landingPage` NÃO é opção de `startStandaloneServer` NEM do construtor `new ApolloServer(...)` em Apollo Server v4.13.0. A única API oficial é um plugin com `serverListener.renderLandingPage()`. Verificado em:
+> - `node_modules/@apollo/server/dist/esm/externalTypes/constructor.d.ts:28-52` — `ApolloServerOptionsBase` **não** tem `landingPage` (o `landingPage: LandingPage | null` em `ApolloServer.d.ts:18` está no estado interno `RunningServerState`, não nas options).
+> - `node_modules/@apollo/server/dist/esm/externalTypes/plugins.d.ts:37-45` — `GraphQLServerListener.renderLandingPage?(): Promise<LandingPage>` é o único caminho.
 
-- [ ] **Step 3.1: Editar `src/server.ts`**
+- [ ] **Step 3.1: Criar `src/server/landingPagePlugin.ts`**
 
-Localizar a chamada atual em `src/server.ts:39-50` (o construtor `new ApolloServer`):
+Criar o arquivo `src/server/landingPagePlugin.ts` com o seguinte conteúdo:
+
+```ts
+import type { ApolloServerPlugin } from '@apollo/server';
+
+export function landingPagePlugin(html: string): ApolloServerPlugin {
+  return {
+    async serverWillStart() {
+      return {
+        async renderLandingPage() {
+          return { html };
+        },
+      };
+    },
+  };
+}
+```
+
+- [ ] **Step 3.2: Editar `src/server.ts` — adicionar import**
+
+No topo de `src/server.ts` (após os imports existentes, próximo ao import de `authPlugin` na linha 9), adicionar:
+
+```ts
+import { landingPagePlugin } from './server/landingPagePlugin';
+```
+
+- [ ] **Step 3.3: Editar `src/server.ts` — adicionar plugin no array `plugins`**
+
+Localizar a chamada atual em `src/server.ts:39-50`:
 
 ```ts
   const server = new ApolloServer({
@@ -174,15 +208,10 @@ Localizar a chamada atual em `src/server.ts:39-50` (o construtor `new ApolloServ
   });
 ```
 
-Substituir por (adiciona `landingPage` no objeto de options):
+Substituir por (extrai HTML para uma constante `const` no escopo da função `startServer` e adiciona `landingPagePlugin` no array `plugins`):
 
 ```ts
-  const server = new ApolloServer({
-    typeDefs,
-    resolvers,
-    plugins: [authPlugin({ accessSecret: cfg.jwt.accessSecret })],
-    landingPage: {
-      html: `<!DOCTYPE html>
+  const LANDING_PAGE_HTML = `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
@@ -228,8 +257,15 @@ a.cta:hover { background: #6edcc6; }
 <a class="cta" href="https://github.com/MartielLima/Api-Orquestrador" target="_blank" rel="noopener noreferrer">Documenta&ccedil;&atilde;o no GitHub</a>
 </main>
 </body>
-</html>`,
-    },
+</html>`;
+
+  const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    plugins: [
+      authPlugin({ accessSecret: cfg.jwt.accessSecret }),
+      landingPagePlugin(LANDING_PAGE_HTML),
+    ],
     formatError: (formattedError, error) => {
       const original = unwrapError(error);
       if (original instanceof UserError) {
@@ -241,14 +277,14 @@ a.cta:hover { background: #6edcc6; }
 ```
 
 **Notas:**
-- O tipo `LandingPage` é `{ html: string | (() => Promise<string>) }` (`node_modules/@apollo/server/dist/esm/externalTypes/plugins.d.ts:43-45`).
-- O `startStandaloneServer` (linhas 51–63) fica **inalterado** — sem `landingPage` lá.
-- As entidades HTML (`&eacute;`, `&ccedil;`, `&otilde;`, `&lt;`, `&gt;`) são usadas porque o template é uma string TS comum, não raw — assim não precisamos escapar backticks nem `${}`.
+- O HTML é extraído para `LANDING_PAGE_HTML` (constante no escopo da função) para manter a construção do `ApolloServer` legível e isolar a string grande.
+- A chamada `startStandaloneServer` (linhas 51–63) fica **inalterada**.
+- Entidades HTML (`&eacute;`, `&ccedil;`, `&otilde;`, `&lt;`, `&gt;`) são usadas porque o template é uma string TS comum, não raw — assim não precisamos escapar backticks nem `${}`.
 - HTML 100% inline: zero `<script>`, zero `<link>`, zero CDN. Funciona offline.
 - Acento `#4ec9b0` + fundo `#0f1419` casam com a paleta `chalk`/`ink` que a TUI já usa.
 - Responsivo: `max-width` no container + `padding` no body.
 
-- [ ] **Step 3.2: Rodar o teste da Task 2 e verificar que agora passa**
+- [ ] **Step 3.4: Rodar o teste da Task 2 e verificar que agora passa**
 
 ```bash
 npm test -- --testPathPattern=landing-page
@@ -258,20 +294,20 @@ Esperado: 2 testes passam.
 - `GET / returns 200 text/html...` agora recebe o HTML da landing page (contém "Api-Orquestrador" e o link do GitHub).
 - `POST / still serves GraphQL (regression)` continua passando — confirma que o Apollo standalone ainda despacha `POST` para o handler GraphQL.
 
-- [ ] **Step 3.3: Rodar typecheck e lint**
+- [ ] **Step 3.5: Rodar typecheck e lint**
 
 ```bash
 npm run typecheck
 npm run lint
 ```
 
-Esperado: 0 erros nos dois. Se o `npm run typecheck` reclamar de escape sequences no template string, voltar ao Step 3.1 e ajustar.
+Esperado: 0 erros nos dois.
 
-- [ ] **Step 3.4: Commit**
+- [ ] **Step 3.6: Commit**
 
 ```bash
-git add src/server.ts
-git commit -m "feat(server): custom landing page on GET / replacing Apollo Sandbox"
+git add src/server/landingPagePlugin.ts src/server.ts
+git commit -m "feat(server): custom landing page on GET / via Apollo plugin"
 ```
 
 ---
@@ -324,7 +360,7 @@ kill %1 2>/dev/null || true
 Abrir `CHANGELOG.md`. Localizar `## [Unreleased] > ### Added` (linhas 5–26). Adicionar uma linha nova no final da lista:
 
 ```markdown
-- **feat(server)**: Custom landing page no `GET /` substituindo o Apollo Sandbox. HTML inline estático (zero CDN, zero JS) com descrição da API e link direto para `https://github.com/MartielLima/Api-Orquestrador`. `POST /` (GraphQL) inalterado. Coberto por `tests/integration/landing-page.spec.ts` (2 testes: GET HTML + POST GraphQL regression).
+- **feat(server)**: Custom landing page no `GET /` substituindo o Apollo Sandbox. Implementado via plugin Apollo (`src/server/landingPagePlugin.ts`) cujo `serverListener.renderLandingPage()` retorna HTML inline estático (zero CDN, zero JS) com descrição da API e link direto para `https://github.com/MartielLima/Api-Orquestrador`. `POST /` (GraphQL) inalterado. Coberto por `tests/integration/landing-page.spec.ts` (2 testes: GET HTML + POST GraphQL regression).
 ```
 
 - [ ] **Step 4.4: Commit final**
@@ -339,10 +375,10 @@ git commit -m "docs(changelog): landing page custom on GET /"
 ## Self-Review (executado pelo planner)
 
 **Spec coverage:**
-- [x] Substituir Apollo Sandbox por HTML estático → Task 3
+- [x] Substituir Apollo Sandbox por HTML estático → Task 3 (via plugin)
 - [x] Texto breve sobre a aplicação → Task 3 (copy do README)
 - [x] Link para `https://github.com/MartielLima/Api-Orquestrador` → Task 3
-- [x] `POST /` inalterado → Task 2 baseline + Task 3 step 3.2 + Task 4 step 4.2
+- [x] `POST /` inalterado → Task 2 baseline + Task 3 step 3.4 + Task 4 step 4.2
 - [x] Sem assets externos → Task 3 (HTML + CSS inline, zero `<script>`/`<link>`)
 - [x] Teste integração → Task 2
 - [x] Ajuste `jest-setup.js` (porta por worker) → Task 1
@@ -350,6 +386,6 @@ git commit -m "docs(changelog): landing page custom on GET /"
 
 **Placeholder scan:** nenhum "TBD" / "TODO" / "implement later" no plano.
 
-**Type consistency:** `startServer`, `StartedServer`, `srv.url`, `srv.stop` são as APIs reais exportadas de `src/server.ts:12-17, 27, 70-72` (verificado durante a exploração). `fetch` é built-in Node 18+ (`engines.node >=18.0.0` no `package.json:9`).
+**Type consistency:** `startServer`, `StartedServer`, `srv.url`, `srv.stop`, `landingPagePlugin` (novo), `ApolloServerPlugin` (import), `authPlugin` (existente) — todas as APIs batem com o que está no `src/server.ts` e no que o Apollo Server v4 expõe.
 
 **Risco residual:** a renderização visual (CSS) não é testada — confia na inspeção visual manual do Step 4.2. Aceitável para este escopo (sem framework de testes visuais no projeto).

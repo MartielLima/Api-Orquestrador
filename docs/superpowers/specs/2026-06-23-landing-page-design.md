@@ -2,7 +2,7 @@
 
 **Data:** 2026-06-23
 **Status:** aprovado (design)
-**Escopo:** `src/server.ts` + `tests/integration/landing-page.spec.ts`
+**Escopo:** `src/server.ts` + `src/server/landingPagePlugin.ts` (novo) + `tests/integration/landing-page.spec.ts`
 
 ## Contexto e problema
 
@@ -33,17 +33,35 @@ Substituir o Apollo Sandbox por uma landing page HTML estática servida no `GET 
 
 ## Design
 
-### Mudança em `src/server.ts`
+### Mudanças em `src/server.ts` + novo `src/server/landingPagePlugin.ts`
 
-Adicionar a opção `landingPage` no construtor `new ApolloServer(...)` (linhas 39–50). `startStandaloneServer` não aceita `landingPage` (só `context` e `listen`) — a opção mora no `ApolloServer` constructor (`node_modules/@apollo/server/dist/esm/ApolloServer.d.ts:18`, tipo `LandingPage = { html: string | (() => Promise<string>) }` em `externalTypes/plugins.d.ts:43-45`).
+**Por que um plugin:** o construtor `new ApolloServer(...)` em Apollo Server v4 não tem campo `landingPage` em `ApolloServerOptionsBase` (verificado em `node_modules/@apollo/server/dist/esm/externalTypes/constructor.d.ts:28-52`). A única API oficial para registrar uma landing page custom é um plugin cujo `serverListener.renderLandingPage()` retorna um objeto `LandingPage = { html: string | (() => Promise<string>) }` (verificado em `externalTypes/plugins.d.ts:37-45`).
+
+**Arquivo novo — `src/server/landingPagePlugin.ts`:**
 
 ```ts
-const server = new ApolloServer({
-  typeDefs,
-  resolvers,
-  plugins: [authPlugin({ accessSecret: cfg.jwt.accessSecret })],
-  landingPage: {
-    html: `<!DOCTYPE html>
+import type { ApolloServerPlugin } from '@apollo/server';
+
+export function landingPagePlugin(html: string): ApolloServerPlugin {
+  return {
+    async serverWillStart() {
+      return {
+        async renderLandingPage() {
+          return { html };
+        },
+      };
+    },
+  };
+}
+```
+
+**Modificação em `src/server.ts:39-50` (construtor `new ApolloServer`):**
+
+```ts
+import { landingPagePlugin } from './server/landingPagePlugin';
+// ... e dentro do construtor, adicionar `landingPagePlugin(LANDING_PAGE_HTML)` no array `plugins`:
+
+const LANDING_PAGE_HTML = `<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
@@ -61,8 +79,15 @@ const server = new ApolloServer({
       </a>
     </main>
   </body>
-</html>`,
-  },
+</html>`;
+
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  plugins: [
+    authPlugin({ accessSecret: cfg.jwt.accessSecret }),
+    landingPagePlugin(LANDING_PAGE_HTML),
+  ],
   formatError: (formattedError, error) => {
     const original = unwrapError(error);
     if (original instanceof UserError) {
@@ -138,6 +163,7 @@ Custo: 1 linha. Não muda nada pra quem já roda testes (o `.env` atual não def
 | Risco | Mitigação |
 |---|---|
 | `landingPage` ser string vazia e o Apollo cair no default | Não acontece — passamos o HTML completo |
+| Tentar passar `landingPage` no construtor `new ApolloServer` (não existe no `ApolloServerOptionsBase` v4) | Spec/plano usam o caminho oficial: plugin com `serverListener.renderLandingPage()` |
 | Esquecer de passar no construtor `ApolloServer` (não no `startStandaloneServer`) | O `startStandaloneServer` não tem essa opção; spec e plano colocam no lugar certo |
 | Build quebrar por template string mal-escapada | `tsc` valida em CI; uso de `String.raw` se houver conflito de backticks (`/`) |
 | `dist/` desatualizado | Build regenera; nada de asset externo pra copiar |
