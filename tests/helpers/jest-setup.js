@@ -4,3 +4,4 @@ const baseUrl =
   process.env.DATABASE_URL_BASE || 'postgresql://api_orquestrador:dev_password@localhost:5432';
 const dbName = `api_orquestrador_test_w${workerId}`;
 process.env.DATABASE_URL = `${baseUrl}/${dbName}`;
+process.env.API_PORT = String(4000 + parseInt(workerId, 10));
