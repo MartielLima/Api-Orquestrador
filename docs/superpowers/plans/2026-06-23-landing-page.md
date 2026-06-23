@@ -151,44 +151,38 @@ git commit -m "test(server): failing test for landing page on GET /"
 ## Task 3: Adicionar `landingPage` em `src/server.ts`
 
 **Files:**
-- Modify: `src/server.ts:51-63` (a chamada `startStandaloneServer`)
+- Modify: `src/server.ts:39-50` (o construtor `new ApolloServer(...)`)
+
+> **⚠️ Correção:** o `landingPage` NÃO é opção do `startStandaloneServer` — é do construtor `new ApolloServer(...)`. Verificado em `node_modules/@apollo/server/dist/esm/standalone/index.d.ts:12-16` (só aceita `context` e `listen`) e `node_modules/@apollo/server/dist/esm/ApolloServer.d.ts:18` (campo `landingPage: LandingPage | null` no `ApolloServerOptions`).
 
 - [ ] **Step 3.1: Editar `src/server.ts`**
 
-Localizar a chamada atual em `src/server.ts:51-63`:
+Localizar a chamada atual em `src/server.ts:39-50` (o construtor `new ApolloServer`):
 
 ```ts
-  const { url } = await startStandaloneServer(server, {
-    context: async ({ req }) => {
-      const xff = req.headers['x-forwarded-for']?.toString().split(',')[0].trim();
-      const ip = xff || req.socket.remoteAddress || null;
-      const userAgent = req.headers['user-agent']?.toString() ?? null;
-      return {
-        ...(await buildContext()),
-        orchestrator,
-        request: { ip, userAgent },
-      };
+  const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    plugins: [authPlugin({ accessSecret: cfg.jwt.accessSecret })],
+    formatError: (formattedError, error) => {
+      const original = unwrapError(error);
+      if (original instanceof UserError) {
+        return original.toGraphQLFormat();
+      }
+      return formattedError;
     },
-    listen: { port: cfg.api.port },
   });
 ```
 
-Substituir por:
+Substituir por (adiciona `landingPage` no objeto de options):
 
 ```ts
-  const { url } = await startStandaloneServer(server, {
-    context: async ({ req }) => {
-      const xff = req.headers['x-forwarded-for']?.toString().split(',')[0].trim();
-      const ip = xff || req.socket.remoteAddress || null;
-      const userAgent = req.headers['user-agent']?.toString() ?? null;
-      return {
-        ...(await buildContext()),
-        orchestrator,
-        request: { ip, userAgent },
-      };
-    },
-    listen: { port: cfg.api.port },
-    landingPage: `<!DOCTYPE html>
+  const server = new ApolloServer({
+    typeDefs,
+    resolvers,
+    plugins: [authPlugin({ accessSecret: cfg.jwt.accessSecret })],
+    landingPage: {
+      html: `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
@@ -235,10 +229,20 @@ a.cta:hover { background: #6edcc6; }
 </main>
 </body>
 </html>`,
+    },
+    formatError: (formattedError, error) => {
+      const original = unwrapError(error);
+      if (original instanceof UserError) {
+        return original.toGraphQLFormat();
+      }
+      return formattedError;
+    },
   });
 ```
 
 **Notas:**
+- O tipo `LandingPage` é `{ html: string | (() => Promise<string>) }` (`node_modules/@apollo/server/dist/esm/externalTypes/plugins.d.ts:43-45`).
+- O `startStandaloneServer` (linhas 51–63) fica **inalterado** — sem `landingPage` lá.
 - As entidades HTML (`&eacute;`, `&ccedil;`, `&otilde;`, `&lt;`, `&gt;`) são usadas porque o template é uma string TS comum, não raw — assim não precisamos escapar backticks nem `${}`.
 - HTML 100% inline: zero `<script>`, zero `<link>`, zero CDN. Funciona offline.
 - Acento `#4ec9b0` + fundo `#0f1419` casam com a paleta `chalk`/`ink` que a TUI já usa.

@@ -35,13 +35,15 @@ Substituir o Apollo Sandbox por uma landing page HTML estática servida no `GET 
 
 ### Mudança em `src/server.ts`
 
-Adicionar a opção `landingPage` na chamada `startStandaloneServer` (linhas 51–63):
+Adicionar a opção `landingPage` no construtor `new ApolloServer(...)` (linhas 39–50). `startStandaloneServer` não aceita `landingPage` (só `context` e `listen`) — a opção mora no `ApolloServer` constructor (`node_modules/@apollo/server/dist/esm/ApolloServer.d.ts:18`, tipo `LandingPage = { html: string | (() => Promise<string>) }` em `externalTypes/plugins.d.ts:43-45`).
 
 ```ts
-const { url } = await startStandaloneServer(server, {
-  context: async ({ req }) => { /* inalterado */ },
-  listen: { port: cfg.api.port },
-  landingPage: ` <!DOCTYPE html>
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  plugins: [authPlugin({ accessSecret: cfg.jwt.accessSecret })],
+  landingPage: {
+    html: `<!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
@@ -60,6 +62,14 @@ const { url } = await startStandaloneServer(server, {
     </main>
   </body>
 </html>`,
+  },
+  formatError: (formattedError, error) => {
+    const original = unwrapError(error);
+    if (original instanceof UserError) {
+      return original.toGraphQLFormat();
+    }
+    return formattedError;
+  },
 });
 ```
 
@@ -128,6 +138,7 @@ Custo: 1 linha. Não muda nada pra quem já roda testes (o `.env` atual não def
 | Risco | Mitigação |
 |---|---|
 | `landingPage` ser string vazia e o Apollo cair no default | Não acontece — passamos o HTML completo |
+| Esquecer de passar no construtor `ApolloServer` (não no `startStandaloneServer`) | O `startStandaloneServer` não tem essa opção; spec e plano colocam no lugar certo |
 | Build quebrar por template string mal-escapada | `tsc` valida em CI; uso de `String.raw` se houver conflito de backticks (`/`) |
 | `dist/` desatualizado | Build regenera; nada de asset externo pra copiar |
 | Cache de CDN servindo Apollo Sandbox antigo | Out of scope; usuário pode invalidar manualmente |
