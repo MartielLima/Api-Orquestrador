@@ -103,7 +103,7 @@ describe('landing page', () => {
   });
 
   it('GET / returns 200 text/html with the app name and GitHub link', async () => {
-    const res = await fetch(srv.url);
+    const res = await fetch(srv.url, { headers: { Accept: 'text/html' } });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toMatch(/text\/html/);
     const html = await res.text();
@@ -141,6 +141,8 @@ Esperado: AMBOS os testes falham.
 - `POST / still serves GraphQL (regression)` passa (ainda não tocamos no server.ts).
 
 Se AMBOS falharem por outro motivo (DB não acessível, port em uso, env vars faltando), corrigir o setup antes de prosseguir. O `POST /` test DEVE passar antes de seguir para a Task 3 — é a baseline de regressão.
+
+**Sobre o header `Accept: text/html`:** o Apollo Server v4 só invoca o hook `renderLandingPage()` do plugin quando o header `Accept` negocia para `text/html` (verificado em `node_modules/@apollo/server/dist/esm/ApolloServer.js:567-580`, função `prefersHTML`). Browsers reais enviam `Accept: text/html,...` por padrão — o caso real (URL aberta no navegador) funciona. O teste envia o header explicitamente porque o `fetch` do Node 18+ envia `*/*` por padrão e cairia no handler GraphQL com HTTP 400.
 
 - [ ] **Step 2.3: Commit (test falhando)**
 

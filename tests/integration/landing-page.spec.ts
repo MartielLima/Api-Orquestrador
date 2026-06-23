@@ -12,7 +12,9 @@ describe('landing page', () => {
   });
 
   it('GET / returns 200 text/html with the app name and GitHub link', async () => {
-    const res = await fetch(srv.url);
+    const res = await fetch(srv.url, {
+      headers: { Accept: 'text/html' },
+    });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toMatch(/text\/html/);
     const html = await res.text();

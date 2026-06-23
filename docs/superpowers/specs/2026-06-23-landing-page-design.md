@@ -124,7 +124,7 @@ describe('landing page', () => {
   afterAll(async () => { await srv.stop(); });
 
   it('GET / returns 200 text/html with the app name and GitHub link', async () => {
-    const res = await fetch(srv.url);
+    const res = await fetch(srv.url, { headers: { Accept: 'text/html' } });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toMatch(/text\/html/);
     const html = await res.text();
@@ -143,6 +143,8 @@ describe('landing page', () => {
   });
 });
 ```
+
+**Nota sobre o `Accept: text/html`:** o Apollo Server v4 só invoca o hook `renderLandingPage()` do plugin quando o header `Accept` negocia para `text/html` (verificado em `node_modules/@apollo/server/dist/esm/ApolloServer.js:567-580`, função `prefersHTML`). Browsers reais enviam `Accept: text/html,...` por padrão, então o caso de uso real (usuário abrindo a URL no navegador) funciona. O teste precisa enviar o header explicitamente porque o `fetch` do Node 18+ envia `*/*` por padrão. Sem o header, o GET cai no handler GraphQL que retorna HTTP 400 (no operation found).
 
 **Regressão coberta:** o segundo teste garante que trocar o `landingPage` não quebrou o `POST /`.
 
