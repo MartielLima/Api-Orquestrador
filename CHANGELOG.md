@@ -24,6 +24,7 @@ Todas as mudancas notaveis deste projeto sao documentadas aqui. O formato segue 
 - **feat(lib)**: New `src/lib/concurrency.ts` — helper `runWithConcurrency(items, n, fn)` para paralelizar loops com concorrência limitada. Usado pelo cron `syncPositions` (paralelismo a nível de iteração; chamadas SOAP continuam serializadas pelo SDK).
 - **test(unit)**: New `tests/unit/concurrency.spec.ts` — 5 cases para `runWithConcurrency` (ordem dos resultados, bound de concorrência, propagação de erro, lista vazia, speedup paralelo).
 - **test(integration)**: New `tests/integration/posicoes-stale.spec.ts` — 3 cases cobrindo fresh cache (sem chamada Sascar), stale cache (retorna em <1s sem bloquear no Sascar mockado de 5s), e cold bootstrap (blocking).
+- **feat(server)**: Custom landing page no `GET /` substituindo o Apollo Sandbox. Implementado via plugin Apollo (`src/server/landingPagePlugin.ts`) cujo `serverListener.renderLandingPage()` retorna HTML inline estático (zero CDN, zero JS) com descrição da API e link direto para `https://github.com/MartielLima/Api-Orquestrador`. `POST /` (GraphQL) inalterado. Coberto por `tests/integration/landing-page.spec.ts` (2 testes: GET HTML + POST GraphQL regression).
 
 ### Fixed
 
